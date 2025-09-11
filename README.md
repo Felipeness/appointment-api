@@ -337,4 +337,4 @@ Este projeto está sob licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais
 
 ## 👨‍💻 Autor
 
-Desenvolvido como parte do desafio técnico para vaga de desenvolvedor backend.
+Desenvolvido por [Ness](https://github.com/Felipeness) para revisar e aplicar conceitos de Clean Architecture, SOLID, e Event-Driven Design.
