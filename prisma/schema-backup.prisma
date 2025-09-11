@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Psychologist {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  phone       String?
+  isActive    Boolean  @default(true)
+  workingDays Int[]    // [1,2,3,4,5] = Monday to Friday
+  startTime   String   // "08:00"
+  endTime     String   // "18:00"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@map("psychologists")
+}
+
+model Patient {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id             String            @id @default(cuid())
+  patientId      String
+  psychologistId String
+  scheduledAt    DateTime
+  status         AppointmentStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  patient      Patient      @relation(fields: [patientId], references: [id])
+  psychologist Psychologist @relation(fields: [psychologistId], references: [id])
+
+  @@unique([psychologistId, scheduledAt])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+  COMPLETED
+}

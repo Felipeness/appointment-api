@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Healthcare Specializations
+model Specialization {
+  id          String   @id @default(cuid())
+  name        String   @unique // "Psicologia Clínica", "Psiquiatria", etc.
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  psychologists PsychologistSpecialization[]
+
+  @@map("specializations")
+}
+
+// Healthcare Professionals (renamed from Psychologist for better healthcare context)
+model Psychologist {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String   @db.VarChar(255)
+  phone             String?  @db.VarChar(20)
+  registrationId    String?  @unique @db.VarChar(50) // CRP, CRM number
+  biography         String?  @db.Text
+  consultationFeeMin Decimal? @db.Decimal(10, 2)
+  consultationFeeMax Decimal? @db.Decimal(10, 2)
+  yearsExperience   Int?
+  isActive          Boolean  @default(true)
+  isVerified        Boolean  @default(false)
+  profileImageUrl   String?
+  
+  // Working schedule - more structured approach
+  workingDays       Int[]    // [1,2,3,4,5] = Monday to Friday
+  startTime         String   // "08:00"
+  endTime           String   // "18:00"
+  timeSlotDuration  Int      @default(60) // minutes per appointment
+  
+  // Audit fields
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  createdBy         String?
+  lastLoginAt       DateTime?
+
+  // Relationships
+  appointments      Appointment[]
+  specializations   PsychologistSpecialization[]
+  availability      PsychologistAvailability[]
+  reviews          Review[]
+
+  // Indexes for performance
+  @@index([email])
+  @@index([registrationId])
+  @@index([isActive, isVerified])
+  @@index([createdAt])
+  @@map("psychologists")
+}
+
+// Junction table for many-to-many relationship
+model PsychologistSpecialization {
+  psychologistId    String
+  specializationId  String
+  isPrimary         Boolean @default(false)
+  certifiedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  psychologist      Psychologist    @relation(fields: [psychologistId], references: [id], onDelete: Cascade)
+  specialization    Specialization  @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+
+  @@id([psychologistId, specializationId])
+  @@map("psychologist_specializations")
+}
+
+// Enhanced Patient model
+model Patient {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String   @db.VarChar(255)
+  phone           String?  @db.VarChar(20)
+  dateOfBirth     DateTime?
+  gender          Gender?
+  address         String?  @db.Text
+  emergencyContact String? @db.VarChar(255)
+  emergencyPhone   String? @db.VarChar(20)
+  medicalNotes     String? @db.Text
+  isActive         Boolean  @default(true)
+  preferredLanguage String? @db.VarChar(10)
+  
+  // Audit fields
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastActiveAt    DateTime?
+
+  // Relationships
+  appointments    Appointment[]
+  medicalHistory  MedicalHistory[]
+  reviews         Review[]
+
+  // Indexes for performance
+  @@index([email])
+  @@index([phone])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("patients")
+}
+
+// Comprehensive appointment model
+model Appointment {
+  id                String            @id @default(cuid())
+  patientId         String
+  psychologistId    String
+  
+  // Scheduling details
+  scheduledAt       DateTime
+  duration          Int               @default(60) // minutes
+  appointmentType   AppointmentType   @default(CONSULTATION)
+  status            AppointmentStatus @default(PENDING)
+  
+  // Communication preferences
+  meetingType       MeetingType       @default(IN_PERSON)
+  meetingUrl        String?           // For video calls
+  meetingRoom       String?           // For in-person
+  
+  // Content and notes
+  reason            String?           @db.Text
+  notes             String?           @db.Text
+  privateNotes      String?           @db.Text // Only visible to psychologist
+  
+  // Financial
+  consultationFee   Decimal?          @db.Decimal(10, 2)
+  isPaid            Boolean           @default(false)
+  
+  // Cancellation tracking
+  cancelledAt       DateTime?
+  cancelledBy       String?           // Patient or Psychologist ID
+  cancellationReason String?          @db.Text
+  
+  // Audit fields
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  confirmedAt       DateTime?
+  completedAt       DateTime?
+
+  // Relationships
+  patient           Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  psychologist      Psychologist      @relation(fields: [psychologistId], references: [id], onDelete: Restrict)
+
+  // Constraints and indexes
+  @@unique([psychologistId, scheduledAt])
+  @@index([patientId])
+  @@index([psychologistId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([createdAt])
+  @@index([appointmentType])
+  @@map("appointments")
+}
+
+// Psychologist availability for specific dates/times
+model PsychologistAvailability {
+  id             String    @id @default(cuid())
+  psychologistId String
+  date           DateTime  @db.Date
+  startTime      String    // "09:00"
+  endTime        String    // "17:00"
+  isAvailable    Boolean   @default(true)
+  reason         String?   // "Holiday", "Personal leave", etc.
+  createdAt      DateTime  @default(now())
+
+  psychologist   Psychologist @relation(fields: [psychologistId], references: [id], onDelete: Cascade)
+
+  @@unique([psychologistId, date])
+  @@index([psychologistId, date])
+  @@map("psychologist_availability")
+}
+
+// Patient medical history
+model MedicalHistory {
+  id          String   @id @default(cuid())
+  patientId   String
+  condition   String   @db.VarChar(255)
+  diagnosis   String?  @db.Text
+  treatment   String?  @db.Text
+  medications String?  @db.Text
+  allergies   String?  @db.Text
+  diagnosedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@map("medical_history")
+}
+
+// Review and rating system
+model Review {
+  id             String   @id @default(cuid())
+  patientId      String
+  psychologistId String
+  rating         Int      // 1-5 stars
+  comment        String?  @db.Text
+  isAnonymous    Boolean  @default(false)
+  isVerified     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  patient        Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  psychologist   Psychologist @relation(fields: [psychologistId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, psychologistId]) // One review per patient per psychologist
+  @@index([psychologistId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+// Enhanced enums
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum AppointmentType {
+  CONSULTATION
+  FOLLOW_UP
+  THERAPY_SESSION
+  ASSESSMENT
+  GROUP_SESSION
+  EMERGENCY
+}
+
+enum MeetingType {
+  IN_PERSON
+  VIDEO_CALL
+  PHONE_CALL
+  HYBRID
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+// Audit log for sensitive operations (optional but recommended for healthcare)
+model AuditLog {
+  id          String   @id @default(cuid())
+  tableName   String   @db.VarChar(50)
+  recordId    String
+  action      String   @db.VarChar(20) // CREATE, UPDATE, DELETE
+  oldValues   Json?
+  newValues   Json?
+  userId      String?
+  ipAddress   String?  @db.VarChar(45)
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([tableName, recordId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
