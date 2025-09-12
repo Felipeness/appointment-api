@@ -9,16 +9,49 @@ import {
   Min,
   IsUrl,
   ValidateIf,
+  IsUUID,
+  Matches,
+  Length,
+  Max,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { AppointmentType, MeetingType } from '../../domain/entities/enums';
+import {
+  CreateAppointmentSchema,
+  CreateAppointmentInput,
+} from './create-appointment.zod';
 
 export class CreateAppointmentDto {
+  /**
+   * Validate the DTO using Zod schema
+   */
+  static validateWithZod(data: any): CreateAppointmentInput {
+    return CreateAppointmentSchema.parse(data);
+  }
+
+  /**
+   * Create a DTO instance with comprehensive validation
+   */
+  static create(data: any): CreateAppointmentDto {
+    // First validate with Zod
+    const validatedData = CreateAppointmentDto.validateWithZod(data);
+
+    // Then create the DTO instance
+    const dto = new CreateAppointmentDto();
+    Object.assign(dto, validatedData);
+    return dto;
+  }
+
   @ApiProperty({
     description: 'Patient email address',
     example: 'patient@example.com',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email format' })
+  @Length(1, 255, { message: 'Email must be between 1 and 255 characters' })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toLowerCase().trim() : value,
+  )
   patientEmail: string;
 
   @ApiProperty({
@@ -26,7 +59,16 @@ export class CreateAppointmentDto {
     example: 'John Doe',
   })
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Patient name is required' })
+  @Length(2, 150, {
+    message: 'Patient name must be between 2 and 150 characters',
+  })
+  @Matches(/^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-\.']+$/, {
+    message: 'Patient name contains invalid characters',
+  })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().replace(/[<>]/g, '') : value,
+  )
   patientName: string;
 
   @ApiProperty({
@@ -36,6 +78,14 @@ export class CreateAppointmentDto {
   })
   @IsOptional()
   @IsString()
+  @Matches(/^[\+]?[\d\s\-\(\)]{8,20}$/, {
+    message: 'Invalid phone number format',
+  })
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value.replace(/[^\d+\-\(\)\s]/g, '').trim()
+      : value,
+  )
   patientPhone?: string;
 
   @ApiProperty({

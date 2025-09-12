@@ -18,17 +18,19 @@ import { EnterpriseAppointmentProducer } from './enterprise-appointment.producer
               name: 'appointment-consumer',
               queueUrl: awsConfig.sqsQueueUrl,
               region: awsConfig.region,
-              // Enterprise-grade configurations
-              batchSize: 10, // Process up to 10 messages at once
-              visibilityTimeoutSeconds: 300, // 5 minutes to process
-              waitTimeSeconds: 20, // Long polling
-              maxReceiveCount: 3, // Max retries before DLQ
+              // Tuned for throughput and reliability (configurable)
+              batchSize: Number(process.env.SQS_BATCH_SIZE) || 10,
+              visibilityTimeoutSeconds:
+                Number(process.env.SQS_VISIBILITY_TIMEOUT) || 300,
+              waitTimeSeconds: Number(process.env.SQS_WAIT_TIME) || 20, // Long polling
+              maxReceiveCount: Number(process.env.SQS_MAX_RECEIVE_COUNT) || 3,
               // Advanced configurations for high throughput
               messageRetentionPeriod: 1209600, // 14 days
-              receiveMessageWaitTimeSeconds: 20,
+              receiveMessageWaitTimeSeconds:
+                Number(process.env.SQS_WAIT_TIME) || 20,
               reddrivePolicy: {
                 deadLetterTargetArn: awsConfig.dlqArn,
-                maxReceiveCount: 3,
+                maxReceiveCount: Number(process.env.SQS_MAX_RECEIVE_COUNT) || 3,
               },
             },
           ],
