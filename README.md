@@ -11,14 +11,14 @@
 
 ## 🚀 **Key Features**
 
-- **🔄 Asynchronous Processing**: Event-driven architecture with AWS SQS
-- **🏗️ Clean Architecture**: Hexagonal architecture with DDD principles
-- **🛡️ Enterprise Security**: DDoS protection, rate limiting, and input validation
-- **📈 High Scalability**: Horizontal scaling with message queues
-- **🔒 Data Consistency**: Saga pattern for distributed transactions
-- **⚡ High Performance**: Circuit breaker, retry mechanisms, and caching
-- **🔍 Observability**: Structured logging with correlation IDs
-- **🚨 Resilience**: Dead Letter Queue and compensation patterns
+- **🔄 Asynchronous Processing**: SQS with exponential backoff, idempotency keys, and DLQ redrive policies
+- **🧱 Architecture**: Hexagonal (Clean) with DDD modeling (Bounded Contexts, Aggregates, Ports/Adapters)
+- **🛡️ Enterprise Security**: Rate limiting, input validation (class-validator), secrets management, and IAM least privilege
+- **📈 Scalability**: Auto scaling with backpressure control (batch size, concurrency, visibility timeout)
+- **🔒 Data Consistency**: Transactional Outbox pattern with Saga orchestration when needed
+- **⚡ Performance**: Circuit breaker for sync calls, timeouts with jitter, Redis caching
+- **🔍 Observability**: Structured logs + correlation IDs, RED/USE metrics, distributed tracing (OpenTelemetry)
+- **🚨 Resilience**: DLQ with poison-pill detection, health checks, and graceful fallbacks
 
 ## 🛠️ **Technology Stack**
 
@@ -38,10 +38,12 @@
 - **Saga Pattern** - Distributed transaction management
 
 ### **Security & Resilience**
-- **[Helmet.js](https://helmetjs.github.io/)** - Security headers
-- **Rate Limiting** - Request throttling with sliding window
-- **Circuit Breaker** - Failure isolation pattern
-- **DDoS Protection** - Progressive attack mitigation
+- **[Helmet.js](https://helmetjs.github.io/)** - Security headers and CORS
+- **[Class Validator](https://github.com/typestack/class-validator)** - Input validation with DTO sanitization
+- **Rate Limiting** - Token bucket algorithm with @nestjs/throttler
+- **Circuit Breaker** - Failure isolation for synchronous calls (HTTP/gRPC)
+- **Idempotency Keys** - Request deduplication with Redis store
+- **Secrets Management** - AWS Secrets Manager integration
 
 ---
 
@@ -80,19 +82,19 @@ graph TB
     Gateway --> Security
 ```
 
-### **Clean Architecture Structure**
+### **Hexagonal Architecture (Clean) with DDD**
 
 ```
 src/
-├── domain/              # 🏛️ Business Logic & Rules (DDD)
-│   ├── entities/        # Domain entities
-│   ├── repositories/    # Repository interfaces
-│   └── value-objects/   # Value objects
-├── application/         # 🎯 Use Cases & Application Services
-│   ├── use-cases/       # Business use cases
-│   ├── dtos/           # Data transfer objects
-│   └── interfaces/      # Application contracts
-├── infrastructure/      # 🔧 External Implementations
+├── domain/              # 🏛️ Business Core (DDD Bounded Context)
+│   ├── entities/        # Aggregates and domain entities  
+│   ├── repositories/    # Repository ports (interfaces)
+│   └── value-objects/   # Domain value objects and rules
+├── application/         # 🎯 Application Layer (Use Cases)
+│   ├── use-cases/       # Application services and orchestration
+│   ├── dtos/           # Data transfer objects (input/output)
+│   └── interfaces/      # Application ports (contracts)
+├── infrastructure/      # 🔧 Adapters (External Concerns)
 │   ├── database/        # Prisma & repositories
 │   ├── messaging/       # SQS & event handling
 │   ├── config/         # Configuration
@@ -274,16 +276,82 @@ bun run format       # Formata código com Prettier
 - **ISP**: Interfaces específicas por contexto  
 - **DIP**: Injeção de dependência
 
-### Clean Architecture
-- **Domain Layer**: Regras de negócio puras
-- **Application Layer**: Casos de uso
-- **Infrastructure Layer**: Detalhes técnicos
-- **Presentation Layer**: Controllers e DTOs
+### Hexagonal Architecture (Clean)
+- **Domain Core**: Aggregates, entities, value objects e regras de negócio (DDD)
+- **Ports**: Interfaces que definem contratos (repository, messaging, etc.)
+- **Application Services**: Orquestração de use cases e transações
+- **Adapters**: Implementações concretas (Prisma, SQS, HTTP, etc.)
 
 ### Design Patterns
-- **Repository Pattern**: Abstração do acesso a dados
-- **Factory Pattern**: Criação de objetos complexos
-- **Observer Pattern**: Notificações assíncronas
+- **Repository Pattern**: Abstração do acesso a dados (Ports/Adapters)
+- **Transactional Outbox**: Eventos e dados persistidos na mesma transação
+- **Saga Pattern**: Orquestração de transações distribuídas quando necessário
+- **Circuit Breaker**: Isolamento de falhas em chamadas síncronas
+
+## 🔧 **Implementação Prática (NestJS/TypeScript)**
+
+### **Correlation ID & Observability**
+```typescript
+// Middleware que injeta x-correlation-id e propaga para logs/SQS
+@Injectable()
+export class CorrelationIdMiddleware implements NestMiddleware {
+  use(req: Request, res: Response, next: NextFunction) {
+    const correlationId = req.headers['x-correlation-id'] || uuidv4();
+    req.correlationId = correlationId;
+    res.setHeader('x-correlation-id', correlationId);
+    next();
+  }
+}
+```
+
+### **Idempotency com Redis**
+```typescript
+// Deduplicação de handlers SQS e requests HTTP
+@Injectable()
+export class IdempotencyService {
+  async processWithIdempotency(key: string, handler: () => Promise<any>) {
+    const existing = await this.redis.get(`idempotency:${key}`);
+    if (existing) return JSON.parse(existing);
+    
+    const result = await handler();
+    await this.redis.setex(`idempotency:${key}`, 3600, JSON.stringify(result));
+    return result;
+  }
+}
+```
+
+### **SQS com Exponential Backoff**
+```typescript
+// maxReceiveCount na redrive + visibility timeout ajustado
+consumers: [{
+  name: 'appointment-consumer',
+  queueUrl: process.env.SQS_QUEUE_URL,
+  batchSize: 10,
+  visibilityTimeoutSeconds: 300, // 5min para processamento
+  maxReceiveCount: 3, // Após 3 tentativas → DLQ
+}]
+```
+
+### **Transactional Outbox Pattern**
+```typescript
+// Persistir evento e dados na mesma transação
+async createAppointment(data: CreateAppointmentDto) {
+  return this.prisma.$transaction(async (tx) => {
+    const appointment = await tx.appointment.create({ data });
+    
+    // Evento persistido na mesma transação
+    await tx.outboxEvent.create({
+      data: {
+        eventType: 'APPOINTMENT_CREATED',
+        aggregateId: appointment.id,
+        payload: JSON.stringify(appointment)
+      }
+    });
+    
+    return appointment;
+  });
+}
+```
 
 ## 🔧 Justificativa Técnica
 
