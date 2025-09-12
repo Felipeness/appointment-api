@@ -2,6 +2,7 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './env.validation';
 import awsConfig from './aws.config';
+import { join } from 'path';
 
 @Global()
 @Module({
@@ -15,6 +16,10 @@ import awsConfig from './aws.config';
         abortEarly: true,
       },
       load: [awsConfig],
+      envFilePath: [
+        join(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`),
+        join(process.cwd(), '.env'),
+      ],
     }),
   ],
   exports: [ConfigModule],
