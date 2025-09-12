@@ -1,4 +1,4 @@
-import { addHours, isAfter, isBefore } from 'date-fns';
+import { addHours, isBefore } from 'date-fns';
 import { AppointmentStatus, AppointmentType, MeetingType } from './enums';
 
 export class Appointment {

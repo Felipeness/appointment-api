@@ -43,7 +43,7 @@ export interface IdempotencyService {
    */
   validateParameters(
     key: string,
-    parameters: Record<string, any>,
+    parameters: Record<string, unknown>,
     userId?: string,
     endpoint?: string,
   ): Promise<boolean>;

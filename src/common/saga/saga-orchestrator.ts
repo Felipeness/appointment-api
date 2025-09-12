@@ -10,7 +10,7 @@ export class SagaOrchestrator {
   async executeSaga(
     sagaName: string,
     steps: SagaStep[],
-    initialData: Record<string, any> = {},
+    initialData: Record<string, unknown> = {},
   ): Promise<SagaExecution> {
     const sagaId = uuidv4();
     const context: SagaContext = {
@@ -64,7 +64,7 @@ export class SagaOrchestrator {
       );
 
       try {
-        const result = await this.executeStepWithRetry(step, execution.context);
+        const result = await this.executeStepWithRetry(step);
 
         // Store step result in context
         execution.context.data[`${step.id}_result`] = result;
@@ -83,10 +83,7 @@ export class SagaOrchestrator {
     }
   }
 
-  private async executeStepWithRetry(
-    step: SagaStep,
-    context: SagaContext,
-  ): Promise<any> {
+  private async executeStepWithRetry(step: SagaStep): Promise<unknown> {
     const maxRetries = step.maxRetries || 3;
     let lastError: Error;
 
@@ -149,22 +146,22 @@ export class SagaOrchestrator {
     this.logger.log(`Saga ${execution.sagaId} compensated`);
   }
 
-  async getSagaExecution(sagaId: string): Promise<SagaExecution | undefined> {
+  getSagaExecution(sagaId: string): SagaExecution | undefined {
     return this.executions.get(sagaId);
   }
 
-  async getAllExecutions(): Promise<SagaExecution[]> {
+  getAllExecutions(): SagaExecution[] {
     return Array.from(this.executions.values());
   }
 
-  async getExecutionsByStatus(status: SagaStatus): Promise<SagaExecution[]> {
+  getExecutionsByStatus(status: SagaStatus): SagaExecution[] {
     return Array.from(this.executions.values()).filter(
       (exec) => exec.status === status,
     );
   }
 
   // Cleanup old executions
-  async cleanupExecutions(olderThanHours: number = 24): Promise<number> {
+  cleanupExecutions(olderThanHours: number = 24): number {
     const cutoffTime = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
     let cleanedCount = 0;
 

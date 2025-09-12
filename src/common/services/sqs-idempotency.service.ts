@@ -27,7 +27,7 @@ export class SQSIdempotencyService {
   /**
    * Check if a message has already been processed
    */
-  async isProcessed(message: Message): Promise<boolean> {
+  isProcessed(message: Message): boolean {
     const key = this.buildMessageKey(message);
 
     try {
@@ -54,7 +54,7 @@ export class SQSIdempotencyService {
     } catch (error) {
       this.logger.error(`Failed to check if message is processed`, {
         messageId: message.MessageId,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
       return false; // Default to allowing processing
     }
@@ -63,11 +63,11 @@ export class SQSIdempotencyService {
   /**
    * Mark a message as processed
    */
-  async markAsProcessed(
+  markAsProcessed(
     message: Message,
     result: 'success' | 'failure' | 'retry',
-    metadata?: Record<string, any>,
-  ): Promise<void> {
+    metadata?: Record<string, unknown>,
+  ): void {
     const key = this.buildMessageKey(message);
 
     try {
@@ -93,7 +93,7 @@ export class SQSIdempotencyService {
       this.logger.error(`Failed to mark message as processed`, {
         messageId: message.MessageId,
         result,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -101,9 +101,7 @@ export class SQSIdempotencyService {
   /**
    * Get processing record for a message
    */
-  async getProcessingRecord(
-    message: Message,
-  ): Promise<SQSIdempotencyRecord | null> {
+  getProcessingRecord(message: Message): SQSIdempotencyRecord | null {
     const key = this.buildMessageKey(message);
 
     try {
@@ -117,7 +115,7 @@ export class SQSIdempotencyService {
     } catch (error) {
       this.logger.error(`Failed to get processing record`, {
         messageId: message.MessageId,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       });
       return null;
     }
@@ -148,12 +146,20 @@ export class SQSIdempotencyService {
    */
   generateMessageGroupId(messageBody: any): string {
     // Extract logical grouping from message
-    if (typeof messageBody === 'object' && messageBody.patientId) {
-      return `patient-${messageBody.patientId}`;
+    if (
+      typeof messageBody === 'object' &&
+      messageBody !== null &&
+      'patientId' in messageBody
+    ) {
+      return `patient-${(messageBody as Record<string, unknown>).patientId as string}`;
     }
 
-    if (typeof messageBody === 'object' && messageBody.psychologistId) {
-      return `psychologist-${messageBody.psychologistId}`;
+    if (
+      typeof messageBody === 'object' &&
+      messageBody !== null &&
+      'psychologistId' in messageBody
+    ) {
+      return `psychologist-${(messageBody as Record<string, unknown>).psychologistId as string}`;
     }
 
     return 'default-group';
@@ -162,10 +168,10 @@ export class SQSIdempotencyService {
   /**
    * Validate message for duplicate content
    */
-  async validateMessageUniqueness(message: Message): Promise<{
+  validateMessageUniqueness(message: Message): {
     isUnique: boolean;
     existingRecord?: SQSIdempotencyRecord;
-  }> {
+  } {
     const bodyHash = this.hashMessageBody(message.Body || '');
 
     // Check for messages with same content hash

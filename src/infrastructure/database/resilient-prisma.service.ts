@@ -2,7 +2,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CircuitBreaker } from '../../common/resilience/circuit-breaker';
-import { DatabaseConnectionException } from '../../common/exceptions/domain.exceptions';
+// import { DatabaseConnectionException } from '../../common/exceptions/domain.exceptions';
 
 @Injectable()
 export class ResilientPrismaService implements OnModuleInit {
@@ -125,7 +125,7 @@ export class ResilientPrismaService implements OnModuleInit {
         connectionCircuitBreaker: this.circuitBreaker.getHealthStatus(),
         queryCircuitBreaker: this.queryCircuitBreaker.getHealthStatus(),
       };
-    } catch (error) {
+    } catch {
       return {
         database: false,
         connectionCircuitBreaker: this.circuitBreaker.getHealthStatus(),

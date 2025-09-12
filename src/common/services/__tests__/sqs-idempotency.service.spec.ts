@@ -34,35 +34,35 @@ describe('SQSIdempotencyService', () => {
   });
 
   describe('isProcessed and markAsProcessed', () => {
-    it('should track processed messages', async () => {
+    it('should track processed messages', () => {
       const message = createMockMessage('msg-123', { test: 'data' });
 
       // Initially not processed
-      const initialStatus = await service.isProcessed(message);
+      const initialStatus = service.isProcessed(message);
       expect(initialStatus).toBe(false);
 
       // Mark as processed
-      await service.markAsProcessed(message, 'success', {
+      service.markAsProcessed(message, 'success', {
         processingTime: 100,
       });
 
       // Now should be processed
-      const processedStatus = await service.isProcessed(message);
+      const processedStatus = service.isProcessed(message);
       expect(processedStatus).toBe(true);
     });
 
-    it('should handle different processing results', async () => {
+    it('should handle different processing results', () => {
       const message1 = createMockMessage('msg-success', { data: 'success' });
       const message2 = createMockMessage('msg-failure', { data: 'failure' });
       const message3 = createMockMessage('msg-retry', { data: 'retry' });
 
-      await service.markAsProcessed(message1, 'success');
-      await service.markAsProcessed(message2, 'failure');
-      await service.markAsProcessed(message3, 'retry');
+      service.markAsProcessed(message1, 'success');
+      service.markAsProcessed(message2, 'failure');
+      service.markAsProcessed(message3, 'retry');
 
-      expect(await service.isProcessed(message1)).toBe(true);
-      expect(await service.isProcessed(message2)).toBe(true);
-      expect(await service.isProcessed(message3)).toBe(true);
+      expect(service.isProcessed(message1)).toBe(true);
+      expect(service.isProcessed(message2)).toBe(true);
+      expect(service.isProcessed(message3)).toBe(true);
 
       const stats = service.getStats();
       expect(stats.successCount).toBe(1);
@@ -70,23 +70,23 @@ describe('SQSIdempotencyService', () => {
       expect(stats.retryCount).toBe(1);
     });
 
-    it('should handle expired records', async () => {
+    it('should handle expired records', () => {
       const message = createMockMessage('msg-expired', { data: 'test' });
 
-      await service.markAsProcessed(message, 'success');
+      service.markAsProcessed(message, 'success');
 
       // Manually expire the record
       const record = (service as any).processedMessages.get('msg:msg-expired');
       record.expiresAt = new Date(Date.now() - 1000); // 1 second ago
 
       // Should now return false as expired
-      const isProcessed = await service.isProcessed(message);
+      const isProcessed = service.isProcessed(message);
       expect(isProcessed).toBe(false);
     });
   });
 
   describe('getProcessingRecord', () => {
-    it('should retrieve processing record with metadata', async () => {
+    it('should retrieve processing record with metadata', () => {
       const message = createMockMessage('msg-record', { test: 'data' });
       const metadata = {
         processingTime: 150,
@@ -94,9 +94,9 @@ describe('SQSIdempotencyService', () => {
         customData: 'value',
       };
 
-      await service.markAsProcessed(message, 'success', metadata);
+      service.markAsProcessed(message, 'success', metadata);
 
-      const record = await service.getProcessingRecord(message);
+      const record = service.getProcessingRecord(message);
 
       expect(record).toBeDefined();
       expect(record?.messageId).toBe('msg-record');
@@ -104,17 +104,17 @@ describe('SQSIdempotencyService', () => {
       expect(record?.metadata).toEqual(metadata);
     });
 
-    it('should return null for non-existent message', async () => {
+    it('should return null for non-existent message', () => {
       const message = createMockMessage('non-existent', { data: 'test' });
 
-      const record = await service.getProcessingRecord(message);
+      const record = service.getProcessingRecord(message);
       expect(record).toBeNull();
     });
 
-    it('should return null for expired record', async () => {
+    it('should return null for expired record', () => {
       const message = createMockMessage('expired-record', { data: 'test' });
 
-      await service.markAsProcessed(message, 'success');
+      service.markAsProcessed(message, 'success');
 
       // Expire the record
       const storedRecord = (service as any).processedMessages.get(
@@ -122,7 +122,7 @@ describe('SQSIdempotencyService', () => {
       );
       storedRecord.expiresAt = new Date(Date.now() - 1000);
 
-      const record = await service.getProcessingRecord(message);
+      const record = service.getProcessingRecord(message);
       expect(record).toBeNull();
     });
   });
@@ -208,53 +208,53 @@ describe('SQSIdempotencyService', () => {
   });
 
   describe('validateMessageUniqueness', () => {
-    it('should detect duplicate content', async () => {
+    it('should detect duplicate content', () => {
       const content = { patientId: 'p1', data: 'same content' };
       const message1 = createMockMessage('msg-1', content);
       const message2 = createMockMessage('msg-2', content); // Same content, different ID
 
       // Process first message
-      await service.markAsProcessed(message1, 'success');
+      service.markAsProcessed(message1, 'success');
 
       // Check uniqueness of second message
-      const validation = await service.validateMessageUniqueness(message2);
+      const validation = service.validateMessageUniqueness(message2);
 
       expect(validation.isUnique).toBe(false);
       expect(validation.existingRecord).toBeDefined();
       expect(validation.existingRecord?.messageId).toBe('msg-1');
     });
 
-    it('should allow unique content', async () => {
+    it('should allow unique content', () => {
       const message1 = createMockMessage('msg-1', { patientId: 'p1' });
       const message2 = createMockMessage('msg-2', { patientId: 'p2' }); // Different content
 
-      await service.markAsProcessed(message1, 'success');
+      service.markAsProcessed(message1, 'success');
 
-      const validation = await service.validateMessageUniqueness(message2);
+      const validation = service.validateMessageUniqueness(message2);
 
       expect(validation.isUnique).toBe(true);
       expect(validation.existingRecord).toBeUndefined();
     });
 
-    it('should ignore expired records in uniqueness check', async () => {
+    it('should ignore expired records in uniqueness check', () => {
       const content = { data: 'test content' };
       const message1 = createMockMessage('msg-expired', content);
       const message2 = createMockMessage('msg-new', content);
 
       // Process first message and expire it
-      await service.markAsProcessed(message1, 'success');
+      service.markAsProcessed(message1, 'success');
       const record = (service as any).processedMessages.get('msg:msg-expired');
       record.expiresAt = new Date(Date.now() - 1000);
 
       // Check uniqueness
-      const validation = await service.validateMessageUniqueness(message2);
+      const validation = service.validateMessageUniqueness(message2);
 
       expect(validation.isUnique).toBe(true); // Should be unique since first record expired
     });
   });
 
   describe('getStats', () => {
-    it('should return accurate statistics', async () => {
+    it('should return accurate statistics', () => {
       const messages = [
         createMockMessage('msg-1', { data: 'test1' }),
         createMockMessage('msg-2', { data: 'test2' }),
@@ -264,11 +264,11 @@ describe('SQSIdempotencyService', () => {
       ];
 
       // Mark messages with different results
-      await service.markAsProcessed(messages[0], 'success');
-      await service.markAsProcessed(messages[1], 'success');
-      await service.markAsProcessed(messages[2], 'failure');
-      await service.markAsProcessed(messages[3], 'retry');
-      await service.markAsProcessed(messages[4], 'success');
+      service.markAsProcessed(messages[0], 'success');
+      service.markAsProcessed(messages[1], 'success');
+      service.markAsProcessed(messages[2], 'failure');
+      service.markAsProcessed(messages[3], 'retry');
+      service.markAsProcessed(messages[4], 'success');
 
       const stats = service.getStats();
 
@@ -315,10 +315,10 @@ describe('SQSIdempotencyService', () => {
   });
 
   describe('cleanup process', () => {
-    it('should manually clean up expired records', async () => {
+    it('should manually clean up expired records', () => {
       const message = createMockMessage('cleanup-test', { data: 'test' });
 
-      await service.markAsProcessed(message, 'success');
+      service.markAsProcessed(message, 'success');
 
       // Expire the record
       const record = (service as any).processedMessages.get('msg:cleanup-test');

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { OutboxEventEntity } from './outbox.entity';
+import { OutboxEvent } from '@prisma/client';
 
 @Injectable()
 export class OutboxRepository {
@@ -57,7 +58,7 @@ export class OutboxRepository {
       take: limit,
     });
 
-    return events.map(this.toDomain);
+    return events.map((event) => this.toDomain(event));
   }
 
   async findByAggregateId(aggregateId: string): Promise<OutboxEventEntity[]> {
@@ -66,7 +67,7 @@ export class OutboxRepository {
       orderBy: { createdAt: 'asc' },
     });
 
-    return events.map(this.toDomain);
+    return events.map((event) => this.toDomain(event));
   }
 
   async deleteProcessedEvents(olderThanDays: number = 7): Promise<number> {
@@ -85,19 +86,19 @@ export class OutboxRepository {
     return result.count;
   }
 
-  private toDomain(event: any): OutboxEventEntity {
+  private toDomain(event: OutboxEvent): OutboxEventEntity {
     return new OutboxEventEntity(
       event.id,
       event.aggregateId,
       event.aggregateType,
       event.eventType,
-      JSON.parse(event.eventData),
+      JSON.parse(event.eventData as string),
       event.createdAt,
-      event.processedAt,
+      event.processedAt || undefined,
       event.retryCount,
       event.maxRetries,
-      event.status,
-      event.error,
+      event.status as 'PENDING' | 'FAILED' | 'PROCESSING' | 'PROCESSED',
+      event.error || undefined,
       event.version,
     );
   }

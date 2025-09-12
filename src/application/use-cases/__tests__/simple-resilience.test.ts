@@ -148,7 +148,7 @@ describe('Simple Resilience Tests', () => {
       const error = new Error('Processing failed');
 
       // Should not throw - DLQ handler processes failures gracefully
-      await dlqHandler.handleFailedMessage(testMessage, error, 1, 'test-queue');
+      dlqHandler.handleFailedMessage(testMessage, error, 1, 'test-queue');
 
       // Verify the handler configuration
       const healthStatus = dlqHandler.getHealthStatus();
@@ -160,14 +160,14 @@ describe('Simple Resilience Tests', () => {
       const error = new Error('Persistent failure');
 
       // Exceed retry limit
-      await dlqHandler.handleFailedMessage(testMessage, error, 3, 'test-queue');
+      dlqHandler.handleFailedMessage(testMessage, error, 3, 'test-queue');
 
       const healthStatus = dlqHandler.getHealthStatus();
       expect(healthStatus.config.maxRetries).toBe(2);
     });
 
     it('should process DLQ messages', async () => {
-      const result = await dlqHandler.processDLQMessages();
+      const result = dlqHandler.processDLQMessages();
 
       expect(result).toHaveProperty('processed');
       expect(result).toHaveProperty('errors');
@@ -218,7 +218,7 @@ describe('Simple Resilience Tests', () => {
         }
       } catch (error) {
         // Step 3: DLQ handles failures
-        await dlqHandler.handleFailedMessage(
+        dlqHandler.handleFailedMessage(
           { workflowId: 'booking-123' },
           error instanceof Error ? error : new Error('Unknown error'),
           1,

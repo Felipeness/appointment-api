@@ -3,6 +3,7 @@ import { PsychologistRepository } from '../../../domain/repositories/psychologis
 import { Psychologist } from '../../../domain/entities/psychologist.entity';
 import { WorkingHours } from '../../../domain/value-objects/working-hours.vo';
 import { PrismaService } from '../prisma.service';
+import { Psychologist as PrismaPsychologist } from '@prisma/client';
 
 @Injectable()
 export class PrismaPsychologistRepository implements PsychologistRepository {
@@ -26,12 +27,16 @@ export class PrismaPsychologistRepository implements PsychologistRepository {
 
   async findAll(): Promise<Psychologist[]> {
     const psychologists = await this.prisma.psychologist.findMany();
-    return psychologists.map(this.toDomain);
+    return psychologists.map((psychologist) => this.toDomain(psychologist));
   }
 
   async save(psychologist: Psychologist): Promise<Psychologist> {
     const data = this.toPersistence(psychologist);
-    const saved = await this.prisma.psychologist.create({ data });
+    const saved = await this.prisma.psychologist.create({
+      data: data as unknown as Parameters<
+        typeof this.prisma.psychologist.create
+      >[0]['data'],
+    });
     return this.toDomain(saved);
   }
 
@@ -50,32 +55,39 @@ export class PrismaPsychologistRepository implements PsychologistRepository {
     });
   }
 
-  private toDomain(psychologist: any): Psychologist {
-    const workingHours = new WorkingHours(psychologist.workingHours || '{}');
+  private toDomain(psychologist: PrismaPsychologist): Psychologist {
+    const workingHours = new WorkingHours(
+      (psychologist as unknown as { workingHours?: string }).workingHours ||
+        '{}',
+    );
 
     return new Psychologist(
       psychologist.id,
       psychologist.email,
       psychologist.name,
       workingHours,
-      psychologist.phone,
-      psychologist.registrationId,
-      psychologist.biography,
-      psychologist.consultationFeeMin,
-      psychologist.consultationFeeMax,
-      psychologist.yearsExperience,
-      psychologist.profileImageUrl,
+      psychologist.phone || undefined,
+      psychologist.registrationId || undefined,
+      psychologist.biography || undefined,
+      psychologist.consultationFeeMin
+        ? Number(psychologist.consultationFeeMin)
+        : undefined,
+      psychologist.consultationFeeMax
+        ? Number(psychologist.consultationFeeMax)
+        : undefined,
+      psychologist.yearsExperience || undefined,
+      psychologist.profileImageUrl || undefined,
       psychologist.timeSlotDuration,
       psychologist.isActive,
       psychologist.isVerified,
       psychologist.createdAt,
       psychologist.updatedAt,
-      psychologist.createdBy,
-      psychologist.lastLoginAt,
+      psychologist.createdBy || undefined,
+      psychologist.lastLoginAt || undefined,
     );
   }
 
-  private toPersistence(psychologist: Psychologist): any {
+  private toPersistence(psychologist: Psychologist): Record<string, unknown> {
     return {
       id: psychologist.id,
       email: psychologist.email,

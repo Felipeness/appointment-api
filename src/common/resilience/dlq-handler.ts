@@ -3,7 +3,7 @@ import { CircuitBreaker } from './circuit-breaker';
 
 export interface DLQMessage {
   id: string;
-  originalMessage: any;
+  originalMessage: Record<string, unknown>;
   failureReason: string;
   attemptCount: number;
   firstFailedAt: Date;
@@ -39,12 +39,12 @@ export class DeadLetterQueueHandler {
     });
   }
 
-  async handleFailedMessage(
-    originalMessage: any,
+  handleFailedMessage(
+    originalMessage: Record<string, unknown>,
     error: Error,
     attemptCount: number,
     originalQueue: string,
-  ): Promise<void> {
+  ): void {
     const dlqMessage: DLQMessage = {
       id: this.generateId(),
       originalMessage,
@@ -64,13 +64,13 @@ export class DeadLetterQueueHandler {
     );
 
     if (attemptCount >= this.config.maxRetries) {
-      await this.sendToDLQ(dlqMessage);
+      this.sendToDLQ(dlqMessage);
     } else {
-      await this.scheduleRetry(dlqMessage);
+      this.scheduleRetry(dlqMessage);
     }
   }
 
-  private async sendToDLQ(message: DLQMessage): Promise<void> {
+  private sendToDLQ(message: DLQMessage): void {
     try {
       this.logger.warn(
         `Sending message to DLQ after ${message.attemptCount} failed attempts`,
@@ -79,21 +79,24 @@ export class DeadLetterQueueHandler {
 
       // In a real implementation, this would send to AWS SQS DLQ
       // For now, we'll simulate storing in a local DLQ store
-      await this.storeDLQMessage(message);
+      this.storeDLQMessage(message);
 
       // Notify monitoring/alerting system
-      await this.notifyDLQMessage(message);
+      this.notifyDLQMessage(message);
     } catch (error) {
       this.logger.error(
-        `Failed to send message to DLQ: ${error.message}`,
-        error.stack,
+        `Failed to send message to DLQ: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
       );
       // This is critical - if we can't even DLQ, we need manual intervention
-      await this.escalateToManualIntervention(message, error);
+      this.escalateToManualIntervention(
+        message,
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 
-  private async scheduleRetry(message: DLQMessage): Promise<void> {
+  private scheduleRetry(message: DLQMessage): void {
     const delay = this.calculateRetryDelay(message.attemptCount);
 
     this.logger.log(
@@ -102,8 +105,8 @@ export class DeadLetterQueueHandler {
     );
 
     // In production, this would use AWS SQS visibility timeout or delay queues
-    setTimeout(async () => {
-      await this.retryMessage(message);
+    setTimeout(() => {
+      void this.retryMessage(message);
     }, delay);
   }
 
@@ -119,12 +122,13 @@ export class DeadLetterQueueHandler {
 
         // In production, this would republish to the original queue
         // For now, we simulate the retry process
-        await this.reprocessMessage(message.originalMessage);
+        this.reprocessMessage(message.originalMessage);
+        return Promise.resolve();
       });
 
       this.logger.log(`Message retry succeeded`, { messageId: message.id });
     } catch (error) {
-      await this.handleFailedMessage(
+      this.handleFailedMessage(
         message.originalMessage,
         error instanceof Error ? error : new Error('Unknown retry error'),
         message.attemptCount + 1,
@@ -133,18 +137,18 @@ export class DeadLetterQueueHandler {
     }
   }
 
-  async processDLQMessages(): Promise<{ processed: number; errors: number }> {
+  processDLQMessages(): { processed: number; errors: number } {
     let processed = 0;
     let errors = 0;
 
     this.logger.log('Starting DLQ message processing');
 
-    const dlqMessages = await this.getDLQMessages();
+    const dlqMessages = this.getDLQMessages();
 
     for (const message of dlqMessages) {
       try {
-        await this.reprocessDLQMessage(message);
-        await this.removeDLQMessage(message.id);
+        this.reprocessDLQMessage(message);
+        this.removeDLQMessage(message.id);
         processed++;
 
         this.logger.log(`Successfully reprocessed DLQ message`, {
@@ -152,13 +156,19 @@ export class DeadLetterQueueHandler {
         });
       } catch (error) {
         errors++;
-        this.logger.error(`Failed to reprocess DLQ message: ${error.message}`, {
-          messageId: message.id,
-          error: error.stack,
-        });
+        this.logger.error(
+          `Failed to reprocess DLQ message: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            messageId: message.id,
+            error: error instanceof Error ? error.stack : undefined,
+          },
+        );
 
         // Update failure count in DLQ
-        await this.updateDLQMessageFailure(message.id, error);
+        this.updateDLQMessageFailure(
+          message.id,
+          error instanceof Error ? error : new Error(String(error)),
+        );
       }
     }
 
@@ -179,10 +189,14 @@ export class DeadLetterQueueHandler {
     return Math.min(exponentialDelay, this.config.maxRetryDelayMs);
   }
 
-  private extractFirstFailedAt(originalMessage: any): Date {
+  private extractFirstFailedAt(originalMessage: Record<string, unknown>): Date {
     // Try to extract from message metadata if available
-    return originalMessage.firstFailedAt
-      ? new Date(originalMessage.firstFailedAt)
+    const firstFailedAt = originalMessage.firstFailedAt;
+    return firstFailedAt &&
+      (typeof firstFailedAt === 'string' ||
+        typeof firstFailedAt === 'number' ||
+        firstFailedAt instanceof Date)
+      ? new Date(firstFailedAt)
       : new Date();
   }
 
@@ -191,25 +205,22 @@ export class DeadLetterQueueHandler {
   }
 
   // Simulated storage methods - in production these would interact with AWS SQS/DynamoDB
-  private async storeDLQMessage(message: DLQMessage): Promise<void> {
+  private storeDLQMessage(message: DLQMessage): void {
     // Store in persistent storage (DynamoDB, Redis, or database)
     this.logger.log(`Stored message in DLQ`, { messageId: message.id });
   }
 
-  private async getDLQMessages(): Promise<DLQMessage[]> {
+  private getDLQMessages(): DLQMessage[] {
     // Retrieve from persistent storage
     return [];
   }
 
-  private async removeDLQMessage(messageId: string): Promise<void> {
+  private removeDLQMessage(messageId: string): void {
     // Remove from persistent storage
     this.logger.log(`Removed message from DLQ`, { messageId });
   }
 
-  private async updateDLQMessageFailure(
-    messageId: string,
-    error: Error,
-  ): Promise<void> {
+  private updateDLQMessageFailure(messageId: string, error: Error): void {
     // Update failure count and error details
     this.logger.log(`Updated DLQ message failure`, {
       messageId,
@@ -217,17 +228,19 @@ export class DeadLetterQueueHandler {
     });
   }
 
-  private async reprocessMessage(originalMessage: any): Promise<void> {
+  private reprocessMessage(originalMessage: Record<string, unknown>): void {
     // Reprocess the original message through the normal pipeline
-    this.logger.log('Reprocessing message through normal pipeline');
+    this.logger.log('Reprocessing message through normal pipeline', {
+      originalMessage,
+    });
   }
 
-  private async reprocessDLQMessage(message: DLQMessage): Promise<void> {
+  private reprocessDLQMessage(message: DLQMessage): void {
     // Reprocess a message from DLQ
-    await this.reprocessMessage(message.originalMessage);
+    this.reprocessMessage(message.originalMessage);
   }
 
-  private async notifyDLQMessage(message: DLQMessage): Promise<void> {
+  private notifyDLQMessage(message: DLQMessage): void {
     // Send to monitoring/alerting system (CloudWatch, Slack, PagerDuty, etc.)
     this.logger.warn(`DLQ Alert: Message sent to DLQ`, {
       messageId: message.id,
@@ -237,10 +250,10 @@ export class DeadLetterQueueHandler {
     });
   }
 
-  private async escalateToManualIntervention(
+  private escalateToManualIntervention(
     message: DLQMessage,
     error: Error,
-  ): Promise<void> {
+  ): void {
     // Critical escalation - even DLQ failed
     this.logger.error(
       'CRITICAL: Failed to DLQ message - manual intervention required',
@@ -257,7 +270,7 @@ export class DeadLetterQueueHandler {
   // Health check and metrics
   getHealthStatus(): {
     isHealthy: boolean;
-    circuitBreakerStatus: any;
+    circuitBreakerStatus: Record<string, unknown>;
     config: DLQConfig;
   } {
     return {

@@ -3,6 +3,7 @@ import { PatientRepository } from '../../../domain/repositories/patient.reposito
 import { Patient } from '../../../domain/entities/patient.entity';
 import { Gender } from '../../../domain/entities/enums';
 import { PrismaService } from '../prisma.service';
+import { Patient as PrismaPatient } from '@prisma/client';
 
 @Injectable()
 export class PrismaPatientRepository implements PatientRepository {
@@ -26,12 +27,16 @@ export class PrismaPatientRepository implements PatientRepository {
 
   async findAll(): Promise<Patient[]> {
     const patients = await this.prisma.patient.findMany();
-    return patients.map(this.toDomain);
+    return patients.map((patient) => this.toDomain(patient));
   }
 
   async save(patient: Patient): Promise<Patient> {
     const data = this.toPersistence(patient);
-    const saved = await this.prisma.patient.create({ data });
+    const saved = await this.prisma.patient.create({
+      data: data as unknown as Parameters<
+        typeof this.prisma.patient.create
+      >[0]['data'],
+    });
     return this.toDomain(saved);
   }
 
@@ -50,27 +55,27 @@ export class PrismaPatientRepository implements PatientRepository {
     });
   }
 
-  private toDomain(patient: any): Patient {
+  private toDomain(patient: PrismaPatient): Patient {
     return new Patient(
       patient.id,
       patient.email,
       patient.name,
-      patient.phone,
-      patient.dateOfBirth,
+      patient.phone || undefined,
+      patient.dateOfBirth || undefined,
       patient.gender as Gender,
-      patient.address,
-      patient.emergencyContact,
-      patient.emergencyPhone,
-      patient.medicalNotes,
-      patient.preferredLanguage,
+      patient.address || undefined,
+      patient.emergencyContact || undefined,
+      patient.emergencyPhone || undefined,
+      patient.medicalNotes || undefined,
+      patient.preferredLanguage || undefined,
       patient.isActive,
       patient.createdAt,
       patient.updatedAt,
-      patient.lastActiveAt,
+      patient.lastActiveAt || undefined,
     );
   }
 
-  private toPersistence(patient: Patient): any {
+  private toPersistence(patient: Patient): Record<string, unknown> {
     return {
       id: patient.id,
       email: patient.email,

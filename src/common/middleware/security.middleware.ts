@@ -5,7 +5,11 @@ import helmet from 'helmet';
 @Injectable()
 export class SecurityMiddleware implements NestMiddleware {
   private readonly logger = new Logger(SecurityMiddleware.name);
-  private readonly helmetMiddleware;
+  private readonly helmetMiddleware: (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => void;
 
   constructor() {
     // Configure Helmet with security headers
@@ -66,7 +70,7 @@ export class SecurityMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction): void {
     // Apply Helmet security headers
-    this.helmetMiddleware(req, res, (err: any) => {
+    this.helmetMiddleware(req, res, (err?: any) => {
       if (err) {
         this.logger.error('Helmet middleware error', err);
         return next(err);
@@ -127,7 +131,9 @@ export class SecurityMiddleware implements NestMiddleware {
         path: req.path,
         method: req.method,
         indicators: suspiciousIndicators,
-        headers: this.sanitizeHeaders(req.headers),
+        headers: this.sanitizeHeaders(
+          req.headers as Record<string, string | string[]>,
+        ),
       });
     }
   }
@@ -289,7 +295,9 @@ export class SecurityMiddleware implements NestMiddleware {
     return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
   }
 
-  private sanitizeHeaders(headers: any): any {
+  private sanitizeHeaders(
+    headers: Record<string, string | string[]>,
+  ): Record<string, string | string[]> {
     // Remove sensitive headers from logs
     const sanitized = { ...headers };
     const sensitiveHeaders = [
@@ -301,7 +309,7 @@ export class SecurityMiddleware implements NestMiddleware {
     ];
 
     sensitiveHeaders.forEach((header) => {
-      if (sanitized[header]) {
+      if (header in sanitized) {
         sanitized[header] = '[REDACTED]';
       }
     });

@@ -1,10 +1,6 @@
 import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import {
-  RateLimiterMemory,
-  RateLimiterRedis,
-  RateLimiterRes,
-} from 'rate-limiter-flexible';
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
 export interface DDoSProtectionConfig {
   // General settings
@@ -158,8 +154,8 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
       }
 
       this.logger.error(`DDoS protection error for IP: ${clientIP}`, {
-        error: error.message,
-        stack: error.stack,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       });
 
       next(); // Continue on error to avoid blocking legitimate requests

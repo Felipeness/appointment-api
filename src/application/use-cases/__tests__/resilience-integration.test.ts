@@ -171,7 +171,7 @@ describe('Resilience Integration Tests', () => {
       await resilientProcessor.executeWithResilience(appointmentMessage);
 
       // Assert - Check that compensation ran
-      const executions = await sagaOrchestrator.getAllExecutions();
+      const executions = sagaOrchestrator.getAllExecutions();
       expect(executions.length).toBeGreaterThan(0);
       expect(executions[0].status).toBe('COMPENSATED');
     });
@@ -251,13 +251,13 @@ describe('Resilience Integration Tests', () => {
   });
 
   describe('Dead Letter Queue Tests', () => {
-    it('should retry failed messages with exponential backoff', async () => {
+    it('should retry failed messages with exponential backoff', () => {
       // Arrange
       const originalMessage = { appointmentId: 'test-dlq-1' };
       const error = new Error('Temporary failure');
 
       // Act
-      await dlqHandler.handleFailedMessage(
+      dlqHandler.handleFailedMessage(
         originalMessage,
         error,
         1,
@@ -269,13 +269,13 @@ describe('Resilience Integration Tests', () => {
       expect(healthStatus.config.maxRetries).toBe(2);
     });
 
-    it('should send to DLQ after max retries exceeded', async () => {
+    it('should send to DLQ after max retries exceeded', () => {
       // Arrange
       const originalMessage = { appointmentId: 'test-dlq-2' };
       const error = new Error('Persistent failure');
 
       // Act - Exceed max retries
-      await dlqHandler.handleFailedMessage(
+      dlqHandler.handleFailedMessage(
         originalMessage,
         error,
         3, // Exceeds maxRetries of 2
@@ -287,9 +287,9 @@ describe('Resilience Integration Tests', () => {
       expect(healthStatus.isHealthy).toBeDefined();
     });
 
-    it('should process DLQ messages', async () => {
+    it('should process DLQ messages', () => {
       // Act
-      const result = await dlqHandler.processDLQMessages();
+      const result = dlqHandler.processDLQMessages();
 
       // Assert
       expect(result).toHaveProperty('processed');
@@ -300,9 +300,9 @@ describe('Resilience Integration Tests', () => {
   });
 
   describe('Integration Health Checks', () => {
-    it('should report overall system health', async () => {
+    it('should report overall system health', () => {
       // Act
-      const healthStatus = await resilientProcessor.getHealthStatus();
+      const healthStatus = resilientProcessor.getHealthStatus();
 
       // Assert
       expect(healthStatus).toHaveProperty('saga');
@@ -368,7 +368,7 @@ describe('Resilience Integration Tests', () => {
       await resilientProcessor.executeWithResilience(appointmentMessage, 1);
 
       // Verify that the system attempted recovery
-      const healthStatus = await resilientProcessor.getHealthStatus();
+      const healthStatus = resilientProcessor.getHealthStatus();
       expect(healthStatus).toBeDefined();
     });
   });

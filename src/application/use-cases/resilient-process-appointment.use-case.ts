@@ -65,8 +65,8 @@ export class ResilientProcessAppointmentUseCase {
         error instanceof Error ? error.stack : undefined,
       );
 
-      await this.dlqHandler.handleFailedMessage(
-        message,
+      this.dlqHandler.handleFailedMessage(
+        message as unknown as Record<string, unknown>,
         error instanceof Error ? error : new Error('Unknown processing error'),
         attemptCount,
         'appointment-processing',
@@ -340,12 +340,12 @@ export class ResilientProcessAppointmentUseCase {
   }
 
   // Health check method
-  async getHealthStatus(): Promise<{
+  getHealthStatus(): {
     saga: boolean;
-    dlq: any;
+    dlq: Record<string, unknown>;
     processingQueue: string;
-  }> {
-    const sagaExecutions = await this.sagaOrchestrator.getAllExecutions();
+  } {
+    const sagaExecutions = this.sagaOrchestrator.getAllExecutions();
     const dlqStatus = this.dlqHandler.getHealthStatus();
 
     return {

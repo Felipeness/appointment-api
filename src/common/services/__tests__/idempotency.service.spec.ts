@@ -26,7 +26,7 @@ describe('RedisIdempotencyService', () => {
   });
 
   describe('store and get', () => {
-    it('should store and retrieve idempotency record', async () => {
+    it('should store and retrieve idempotency record', () => {
       const record: IdempotencyRecord = {
         key: 'test-key-123',
         userId: 'user-123',
@@ -41,9 +41,9 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000), // 1 hour
       };
 
-      await service.store(record);
+      service.store(record);
 
-      const retrieved = await service.get(
+      const retrieved = service.get(
         'test-key-123',
         'user-123',
         'POST:/appointments',
@@ -56,12 +56,12 @@ describe('RedisIdempotencyService', () => {
       expect(retrieved?.response.body).toEqual(record.response.body);
     });
 
-    it('should return null for non-existent key', async () => {
-      const result = await service.get('non-existent-key');
+    it('should return null for non-existent key', () => {
+      const result = service.get('non-existent-key');
       expect(result).toBeNull();
     });
 
-    it('should return null for expired record', async () => {
+    it('should return null for expired record', () => {
       const record: IdempotencyRecord = {
         key: 'expired-key',
         endpoint: 'POST:/test',
@@ -72,15 +72,15 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
       };
 
-      await service.store(record);
+      service.store(record);
 
-      const result = await service.get('expired-key');
+      const result = service.get('expired-key');
       expect(result).toBeNull();
     });
   });
 
   describe('exists', () => {
-    it('should return true for existing key', async () => {
+    it('should return true for existing key', () => {
       const record: IdempotencyRecord = {
         key: 'exists-test',
         endpoint: 'POST:/test',
@@ -91,18 +91,18 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      await service.store(record);
+      service.store(record);
 
-      const exists = await service.exists('exists-test');
+      const exists = service.exists('exists-test');
       expect(exists).toBe(true);
     });
 
-    it('should return false for non-existent key', async () => {
-      const exists = await service.exists('does-not-exist');
+    it('should return false for non-existent key', () => {
+      const exists = service.exists('does-not-exist');
       expect(exists).toBe(false);
     });
 
-    it('should return false for expired key', async () => {
+    it('should return false for expired key', () => {
       const record: IdempotencyRecord = {
         key: 'expired-exists',
         endpoint: 'POST:/test',
@@ -113,9 +113,9 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() - 1000),
       };
 
-      await service.store(record);
+      service.store(record);
 
-      const exists = await service.exists('expired-exists');
+      const exists = service.exists('expired-exists');
       expect(exists).toBe(false);
     });
   });
@@ -135,8 +135,8 @@ describe('RedisIdempotencyService', () => {
       expiresAt: new Date(Date.now() + 3600000),
     };
 
-    it('should return true for identical parameters', async () => {
-      await service.store(baseRecord);
+    it('should return true for identical parameters', () => {
+      service.store(baseRecord);
 
       const sameParameters = {
         patientId: 'p1',
@@ -144,15 +144,12 @@ describe('RedisIdempotencyService', () => {
         data: { priority: 'high' },
       };
 
-      const isValid = await service.validateParameters(
-        'param-test',
-        sameParameters,
-      );
+      const isValid = service.validateParameters('param-test', sameParameters);
       expect(isValid).toBe(true);
     });
 
-    it('should return false for different parameters', async () => {
-      await service.store(baseRecord);
+    it('should return false for different parameters', () => {
+      service.store(baseRecord);
 
       const differentParameters = {
         patientId: 'p2', // Different patient
@@ -160,25 +157,22 @@ describe('RedisIdempotencyService', () => {
         data: { priority: 'high' },
       };
 
-      const isValid = await service.validateParameters(
+      const isValid = service.validateParameters(
         'param-test',
         differentParameters,
       );
       expect(isValid).toBe(false);
     });
 
-    it('should return true for non-existent key (new request)', async () => {
+    it('should return true for non-existent key (new request)', () => {
       const anyParameters = { test: 'value' };
 
-      const isValid = await service.validateParameters(
-        'new-key',
-        anyParameters,
-      );
+      const isValid = service.validateParameters('new-key', anyParameters);
       expect(isValid).toBe(true);
     });
 
-    it('should handle parameter order differences', async () => {
-      await service.store(baseRecord);
+    it('should handle parameter order differences', () => {
+      service.store(baseRecord);
 
       // Same parameters, different order
       const reorderedParameters = {
@@ -187,7 +181,7 @@ describe('RedisIdempotencyService', () => {
         data: { priority: 'high' },
       };
 
-      const isValid = await service.validateParameters(
+      const isValid = service.validateParameters(
         'param-test',
         reorderedParameters,
       );
@@ -196,7 +190,7 @@ describe('RedisIdempotencyService', () => {
   });
 
   describe('cleanup', () => {
-    it('should remove expired records', async () => {
+    it('should remove expired records', () => {
       // Add expired record
       const expiredRecord: IdempotencyRecord = {
         key: 'expired-cleanup',
@@ -219,18 +213,18 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      await service.store(expiredRecord);
-      await service.store(validRecord);
+      service.store(expiredRecord);
+      service.store(validRecord);
 
       // Verify both exist initially
       expect((service as any).cache.size).toBe(2);
 
       // Run cleanup
-      await service.cleanup();
+      service.cleanup();
 
       // Verify only valid record remains
-      const expiredExists = await service.exists('expired-cleanup');
-      const validExists = await service.exists('valid-cleanup');
+      const expiredExists = service.exists('expired-cleanup');
+      const validExists = service.exists('valid-cleanup');
 
       expect(expiredExists).toBe(false);
       expect(validExists).toBe(true);
@@ -238,7 +232,7 @@ describe('RedisIdempotencyService', () => {
   });
 
   describe('cache key building', () => {
-    it('should build different keys for different contexts', async () => {
+    it('should build different keys for different contexts', () => {
       const record1: IdempotencyRecord = {
         key: 'same-key',
         userId: 'user1',
@@ -261,12 +255,12 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      await service.store(record1);
-      await service.store(record2);
+      service.store(record1);
+      service.store(record2);
 
       // Both records should be stored separately
-      const result1 = await service.get('same-key', 'user1', 'POST:/test');
-      const result2 = await service.get('same-key', 'user2', 'POST:/test');
+      const result1 = service.get('same-key', 'user1', 'POST:/test');
+      const result2 = service.get('same-key', 'user2', 'POST:/test');
 
       expect(result1).toBeDefined();
       expect(result2).toBeDefined();
