@@ -14,7 +14,9 @@ const envSchema = z.object({
   AWS_REGION: z.string().min(1).default('us-east-1'),
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
+  AWS_ENDPOINT_URL: z.string().url().optional(), // For LocalStack development
   SQS_APPOINTMENT_QUEUE_URL: z.string().url(),
+  SQS_APPOINTMENT_DLQ_URL: z.string().url().optional(), // Dead Letter Queue
 
   // Redis Configuration
   REDIS_HOST: z.string().min(1).default('localhost'),
