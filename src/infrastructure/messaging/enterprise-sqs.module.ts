@@ -9,6 +9,7 @@ interface AwsConfig {
   dlqArn?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
+  endpointUrl?: string; // For LocalStack
 }
 
 @Module({
@@ -71,6 +72,7 @@ interface AwsConfig {
           // Global SQS configurations
           awsConfig: {
             region: awsConfig.region,
+            ...(awsConfig.endpointUrl ? { endpoint: awsConfig.endpointUrl } : {}),
             // Use default credential provider chain (AWS CLI, environment, IAM role, etc.)
             ...(awsConfig.accessKeyId && awsConfig.secretAccessKey
               ? {
