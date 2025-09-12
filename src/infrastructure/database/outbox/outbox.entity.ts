@@ -24,9 +24,13 @@ export class OutboxEventEntity implements OutboxEvent {
     public readonly processedAt?: Date,
     public readonly retryCount: number = 0,
     public readonly maxRetries: number = 3,
-    public readonly status: 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED' = 'PENDING',
+    public readonly status:
+      | 'PENDING'
+      | 'PROCESSING'
+      | 'PROCESSED'
+      | 'FAILED' = 'PENDING',
     public readonly error?: string,
-    public readonly version: number = 1
+    public readonly version: number = 1,
   ) {}
 
   public markAsProcessing(): OutboxEventEntity {
@@ -42,7 +46,7 @@ export class OutboxEventEntity implements OutboxEvent {
       this.maxRetries,
       'PROCESSING',
       this.error,
-      this.version
+      this.version,
     );
   }
 
@@ -59,7 +63,7 @@ export class OutboxEventEntity implements OutboxEvent {
       this.maxRetries,
       'PROCESSED',
       this.error,
-      this.version
+      this.version,
     );
   }
 
@@ -76,7 +80,7 @@ export class OutboxEventEntity implements OutboxEvent {
       this.maxRetries,
       this.retryCount + 1 >= this.maxRetries ? 'FAILED' : 'PENDING',
       error,
-      this.version
+      this.version,
     );
   }
 

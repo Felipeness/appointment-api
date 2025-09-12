@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Body, UseGuards, HttpStatus } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/require-await */
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { DDoSProtectionMiddleware } from '../../common/middleware/ddos-protection.middleware';
-import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard';
+import {
+  RateLimit,
+  RateLimitGuard,
+} from '../../common/guards/rate-limit.guard';
 
 @ApiTags('security')
 @Controller('security')
@@ -18,7 +29,8 @@ export class SecurityController {
   @RateLimit({ points: 5, duration: 60 }) // 5 requests per minute for security status
   @ApiOperation({
     summary: 'Get security status and statistics',
-    description: 'Returns current security protection status, rate limiting stats, and threat detection information.',
+    description:
+      'Returns current security protection status, rate limiting stats, and threat detection information.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -99,7 +111,8 @@ export class SecurityController {
   @RateLimit({ points: 2, duration: 300 }) // 2 requests per 5 minutes for whitelist management
   @ApiOperation({
     summary: 'Add IP to whitelist',
-    description: 'Add an IP address to the whitelist to bypass rate limiting and DDoS protection.',
+    description:
+      'Add an IP address to the whitelist to bypass rate limiting and DDoS protection.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -136,7 +149,8 @@ export class SecurityController {
   @RateLimit({ points: 5, duration: 300 }) // 5 requests per 5 minutes for blacklist management
   @ApiOperation({
     summary: 'Add IP to blacklist',
-    description: 'Add an IP address to the blacklist to block all requests from that IP.',
+    description:
+      'Add an IP address to the blacklist to block all requests from that IP.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -173,7 +187,8 @@ export class SecurityController {
   @RateLimit({ points: 3, duration: 300 }) // 3 requests per 5 minutes for IP clearing
   @ApiOperation({
     summary: 'Clear IP restrictions',
-    description: 'Remove all restrictions (suspicious, attacking, warnings) for a specific IP address.',
+    description:
+      'Remove all restrictions (suspicious, attacking, warnings) for a specific IP address.',
   })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -247,9 +262,10 @@ export class SecurityController {
 
   private isValidIP(ip: string): boolean {
     // Simple IP validation (IPv4 and IPv6)
-    const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    const ipv4Regex =
+      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
-    
+
     return ipv4Regex.test(ip) || ipv6Regex.test(ip);
   }
 }

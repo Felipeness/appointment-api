@@ -18,7 +18,9 @@ describe('Domain Exceptions', () => {
       const appointmentId = 'test-appointment-id';
       const exception = new AppointmentNotFoundException(appointmentId);
 
-      expect(exception.message).toBe(`Appointment with ID '${appointmentId}' not found`);
+      expect(exception.message).toBe(
+        `Appointment with ID '${appointmentId}' not found`,
+      );
       expect(exception.getStatus()).toBe(HttpStatus.NOT_FOUND);
       expect(exception.code).toBe('APPOINTMENT_NOT_FOUND');
       expect(exception.name).toBe('AppointmentNotFoundException');
@@ -52,7 +54,9 @@ describe('Domain Exceptions', () => {
       const patientId = 'patient-123';
       const exception = new PatientNotFoundException(patientId);
 
-      expect(exception.message).toBe(`Patient with identifier '${patientId}' not found`);
+      expect(exception.message).toBe(
+        `Patient with identifier '${patientId}' not found`,
+      );
       expect(exception.getStatus()).toBe(HttpStatus.NOT_FOUND);
       expect(exception.code).toBe('PATIENT_NOT_FOUND');
     });
@@ -63,7 +67,9 @@ describe('Domain Exceptions', () => {
       const psychologistId = 'psych-123';
       const exception = new PsychologistNotFoundException(psychologistId);
 
-      expect(exception.message).toBe(`Psychologist with identifier '${psychologistId}' not found`);
+      expect(exception.message).toBe(
+        `Psychologist with identifier '${psychologistId}' not found`,
+      );
       expect(exception.getStatus()).toBe(HttpStatus.NOT_FOUND);
       expect(exception.code).toBe('PSYCHOLOGIST_NOT_FOUND');
     });
@@ -109,11 +115,11 @@ describe('Domain Exceptions', () => {
         new ValidationError('name', 'Name must be at least 2 characters'),
         new ValidationError('phone', 'Invalid phone format'),
       ];
-      
+
       const exception = new MultipleValidationException(errors);
 
       expect(exception.message).toBe(
-        'Validation failed: email: Email is required, name: Name must be at least 2 characters, phone: Invalid phone format'
+        'Validation failed: email: Email is required, name: Name must be at least 2 characters, phone: Invalid phone format',
       );
       expect(exception.getStatus()).toBe(HttpStatus.BAD_REQUEST);
       expect(exception.code).toBe('MULTIPLE_VALIDATION_ERRORS');
@@ -124,7 +130,9 @@ describe('Domain Exceptions', () => {
       const errors = [new ValidationError('email', 'Email is required')];
       const exception = new MultipleValidationException(errors);
 
-      expect(exception.message).toBe('Validation failed: email: Email is required');
+      expect(exception.message).toBe(
+        'Validation failed: email: Email is required',
+      );
       expect(exception.errors).toHaveLength(1);
     });
   });
@@ -134,7 +142,7 @@ describe('Domain Exceptions', () => {
       const field = 'email';
       const message = 'Email is required';
       const value = null;
-      
+
       const error = new ValidationError(field, message, value);
 
       expect(error.field).toBe(field);
@@ -145,7 +153,7 @@ describe('Domain Exceptions', () => {
     it('should create validation error without value', () => {
       const field = 'name';
       const message = 'Name is required';
-      
+
       const error = new ValidationError(field, message);
 
       expect(error.field).toBe(field);

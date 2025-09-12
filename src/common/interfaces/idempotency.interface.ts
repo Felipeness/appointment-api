@@ -22,7 +22,11 @@ export interface IdempotencyService {
   /**
    * Retrieve an idempotency record by key
    */
-  get(key: string, userId?: string, endpoint?: string): Promise<IdempotencyRecord | null>;
+  get(
+    key: string,
+    userId?: string,
+    endpoint?: string,
+  ): Promise<IdempotencyRecord | null>;
 
   /**
    * Check if a key exists and is valid
@@ -38,10 +42,10 @@ export interface IdempotencyService {
    * Validate parameters match the original request
    */
   validateParameters(
-    key: string, 
+    key: string,
     parameters: Record<string, any>,
     userId?: string,
-    endpoint?: string
+    endpoint?: string,
   ): Promise<boolean>;
 }
 

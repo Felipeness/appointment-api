@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SqsModule } from '@ssut/nestjs-sqs';
@@ -10,7 +11,7 @@ import { EnterpriseAppointmentProducer } from './enterprise-appointment.producer
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const awsConfig = configService.get('aws');
-        
+
         return {
           consumers: [
             {
@@ -42,7 +43,10 @@ import { EnterpriseAppointmentProducer } from './enterprise-appointment.producer
                 base: 1000,
                 customBackoff: (retryCount: number) => {
                   // Exponential backoff with jitter
-                  return Math.floor(Math.random() * 1000) + Math.pow(2, retryCount) * 1000;
+                  return (
+                    Math.floor(Math.random() * 1000) +
+                    Math.pow(2, retryCount) * 1000
+                  );
                 },
               },
             },
@@ -51,12 +55,14 @@ import { EnterpriseAppointmentProducer } from './enterprise-appointment.producer
           awsConfig: {
             region: awsConfig.region,
             // Use default credential provider chain (AWS CLI, environment, IAM role, etc.)
-            ...(awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
-              credentials: {
-                accessKeyId: awsConfig.accessKeyId,
-                secretAccessKey: awsConfig.secretAccessKey,
-              }
-            } : {})
+            ...(awsConfig.accessKeyId && awsConfig.secretAccessKey
+              ? {
+                  credentials: {
+                    accessKeyId: awsConfig.accessKeyId,
+                    secretAccessKey: awsConfig.secretAccessKey,
+                  },
+                }
+              : {}),
           },
         };
       },

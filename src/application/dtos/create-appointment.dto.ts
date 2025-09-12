@@ -1,4 +1,15 @@
-import { IsString, IsEmail, IsDateString, IsOptional, IsNotEmpty, IsEnum, IsNumber, Min, IsUrl, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsDateString,
+  IsOptional,
+  IsNotEmpty,
+  IsEnum,
+  IsNumber,
+  Min,
+  IsUrl,
+  ValidateIf,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { AppointmentType, MeetingType } from '../../domain/entities/enums';
 
@@ -80,7 +91,11 @@ export class CreateAppointmentDto {
   })
   @IsOptional()
   @IsUrl()
-  @ValidateIf(o => o.meetingType === MeetingType.VIDEO_CALL || o.meetingType === MeetingType.PHONE_CALL)
+  @ValidateIf(
+    (o: CreateAppointmentDto) =>
+      o.meetingType === MeetingType.VIDEO_CALL ||
+      o.meetingType === MeetingType.PHONE_CALL,
+  )
   meetingUrl?: string;
 
   @ApiProperty({
@@ -90,7 +105,9 @@ export class CreateAppointmentDto {
   })
   @IsOptional()
   @IsString()
-  @ValidateIf(o => o.meetingType === MeetingType.IN_PERSON)
+  @ValidateIf(
+    (o: CreateAppointmentDto) => o.meetingType === MeetingType.IN_PERSON,
+  )
   meetingRoom?: string;
 
   @ApiProperty({
@@ -113,7 +130,7 @@ export class CreateAppointmentDto {
 
   @ApiProperty({
     description: 'Consultation fee for this appointment',
-    example: 150.00,
+    example: 150.0,
     required: false,
   })
   @IsOptional()

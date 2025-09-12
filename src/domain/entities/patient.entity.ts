@@ -16,7 +16,7 @@ export class Patient {
     public readonly isActive: boolean = true,
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date(),
-    public readonly lastActiveAt?: Date
+    public readonly lastActiveAt?: Date,
   ) {
     this.validate();
   }
@@ -56,11 +56,15 @@ export class Patient {
       false,
       this.createdAt,
       new Date(),
-      this.lastActiveAt
+      this.lastActiveAt,
     );
   }
 
-  public updateContactInfo(email?: string, phone?: string, address?: string): Patient {
+  public updateContactInfo(
+    email?: string,
+    phone?: string,
+    address?: string,
+  ): Patient {
     return new Patient(
       this.id,
       email || this.email,
@@ -76,7 +80,7 @@ export class Patient {
       this.isActive,
       this.createdAt,
       new Date(),
-      new Date() // lastActiveAt
+      new Date(), // lastActiveAt
     );
   }
 
@@ -85,7 +89,7 @@ export class Patient {
     gender?: Gender,
     emergencyContact?: string,
     emergencyPhone?: string,
-    medicalNotes?: string
+    medicalNotes?: string,
   ): Patient {
     return new Patient(
       this.id,
@@ -102,7 +106,7 @@ export class Patient {
       this.isActive,
       this.createdAt,
       new Date(),
-      new Date() // lastActiveAt
+      new Date(), // lastActiveAt
     );
   }
 }

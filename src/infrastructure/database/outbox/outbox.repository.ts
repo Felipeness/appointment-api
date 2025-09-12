@@ -98,7 +98,7 @@ export class OutboxRepository {
       event.maxRetries,
       event.status,
       event.error,
-      event.version
+      event.version,
     );
   }
 }

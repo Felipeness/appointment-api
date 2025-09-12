@@ -1,27 +1,31 @@
 import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { RateLimiterMemory, RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible';
+import {
+  RateLimiterMemory,
+  RateLimiterRedis,
+  RateLimiterRes,
+} from 'rate-limiter-flexible';
 
 export interface DDoSProtectionConfig {
   // General settings
   enabled: boolean;
-  
+
   // Rate limiting
   windowMs: number; // Time window in milliseconds
   maxRequests: number; // Max requests per window
-  
+
   // DDoS detection
   suspiciousThreshold: number; // Requests per minute to be considered suspicious
   attackThreshold: number; // Requests per minute to be considered attack
-  
+
   // Progressive blocking
   warningThreshold: number; // When to start warning
   slowdownThreshold: number; // When to start slowing down responses
-  
+
   // IP whitelist/blacklist
   whitelist: string[]; // IPs to never block
   blacklist: string[]; // IPs to always block
-  
+
   // Response settings
   message: string;
   skipSuccessfulRequests: boolean;
@@ -31,17 +35,17 @@ export interface DDoSProtectionConfig {
 @Injectable()
 export class DDoSProtectionMiddleware implements NestMiddleware {
   private readonly logger = new Logger(DDoSProtectionMiddleware.name);
-  
+
   // Rate limiters for different scenarios
   private readonly generalLimiter: RateLimiterMemory;
   private readonly suspiciousLimiter: RateLimiterMemory;
   private readonly attackLimiter: RateLimiterMemory;
-  
+
   // Tracking
   private readonly suspiciousIPs = new Set<string>();
   private readonly attackingIPs = new Set<string>();
   private readonly warningIPs = new Map<string, number>(); // IP -> warning count
-  
+
   private readonly config: DDoSProtectionConfig;
 
   constructor() {
@@ -106,7 +110,7 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
     const clientIP = this.getClientIP(req);
     const userAgent = req.headers['user-agent'] || 'unknown';
     const endpoint = req.path;
-    
+
     try {
       // Check if IP is whitelisted
       if (this.isWhitelisted(clientIP)) {
@@ -130,7 +134,10 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
           userAgent,
           endpoint,
         });
-        return this.sendBlockedResponse(res, 'IP address is temporarily blocked due to suspicious activity');
+        return this.sendBlockedResponse(
+          res,
+          'IP address is temporarily blocked due to suspicious activity',
+        );
       }
 
       // Progressive rate limiting
@@ -154,24 +161,31 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
         error: error.message,
         stack: error.stack,
       });
-      
+
       next(); // Continue on error to avoid blocking legitimate requests
     }
   }
 
-  private async checkGeneralRateLimit(ip: string, req: Request, res: Response): Promise<void> {
+  private async checkGeneralRateLimit(
+    ip: string,
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     try {
       const limiterRes = await this.generalLimiter.consume(ip);
-      
+
       // Add rate limit headers
       res.setHeader('X-RateLimit-Limit', this.config.maxRequests);
       res.setHeader('X-RateLimit-Remaining', limiterRes.remainingPoints);
-      res.setHeader('X-RateLimit-Reset', Math.round(limiterRes.msBeforeNext / 1000));
+      res.setHeader(
+        'X-RateLimit-Reset',
+        Math.round(limiterRes.msBeforeNext / 1000),
+      );
 
       // Warning for high usage
       if (limiterRes.remainingPoints < this.config.warningThreshold) {
         this.warningIPs.set(ip, (this.warningIPs.get(ip) || 0) + 1);
-        
+
         this.logger.warn(`High request rate from IP: ${ip}`, {
           ip,
           remaining: limiterRes.remainingPoints,
@@ -179,7 +193,6 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
           userAgent: req.headers['user-agent'],
         });
       }
-
     } catch (rejRes) {
       if (rejRes instanceof RateLimiterRes) {
         this.logger.warn(`Rate limit exceeded for IP: ${ip}`, {
@@ -196,13 +209,17 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
     }
   }
 
-  private async checkSuspiciousActivity(ip: string, req: Request, res: Response): Promise<void> {
+  private async checkSuspiciousActivity(
+    ip: string,
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     try {
       await this.suspiciousLimiter.consume(ip);
     } catch (rejRes) {
       if (rejRes instanceof RateLimiterRes) {
         this.suspiciousIPs.add(ip);
-        
+
         this.logger.warn(`Suspicious activity detected from IP: ${ip}`, {
           ip,
           endpoint: req.path,
@@ -219,13 +236,17 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
     }
   }
 
-  private async checkAttackPattern(ip: string, req: Request, res: Response): Promise<void> {
+  private async checkAttackPattern(
+    ip: string,
+    req: Request,
+    res: Response,
+  ): Promise<void> {
     try {
       await this.attackLimiter.consume(ip);
     } catch (rejRes) {
       if (rejRes instanceof RateLimiterRes) {
         this.attackingIPs.add(ip);
-        
+
         this.logger.error(`DDoS attack pattern detected from IP: ${ip}`, {
           ip,
           endpoint: req.path,
@@ -238,7 +259,11 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
         this.alertAttack(ip, req);
 
         res.setHeader('X-Attack-Detected', 'true');
-        this.sendRateLimitResponse(res, rejRes, 'DDoS attack detected - IP temporarily blocked');
+        this.sendRateLimitResponse(
+          res,
+          rejRes,
+          'DDoS attack detected - IP temporarily blocked',
+        );
         throw rejRes;
       }
       throw rejRes;
@@ -266,7 +291,7 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
   private isRequestSuspicious(req: Request): boolean {
     const userAgent = req.headers['user-agent'] || '';
     const path = req.path;
-    
+
     // Check for common attack patterns
     const suspiciousPatterns = [
       /bot|crawler|spider/i,
@@ -284,8 +309,8 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
 
     const contentLength = req.headers['content-length'];
     return (
-      suspiciousPatterns.some(pattern => pattern.test(userAgent)) ||
-      suspiciousPaths.some(pattern => pattern.test(path)) ||
+      suspiciousPatterns.some((pattern) => pattern.test(userAgent)) ||
+      suspiciousPaths.some((pattern) => pattern.test(path)) ||
       (contentLength !== undefined && parseInt(contentLength) > 10000000) // 10MB+
     );
   }
@@ -299,13 +324,20 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
   }
 
   private isLocalIP(ip: string): boolean {
-    return ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.') || false;
+    return (
+      ip === '127.0.0.1' ||
+      ip === '::1' ||
+      ip.startsWith('192.168.') ||
+      ip.startsWith('10.') ||
+      ip.startsWith('172.') ||
+      false
+    );
   }
 
   private getClientIP(req: Request): string {
     return (
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      req.headers['x-real-ip'] as string ||
+      (req.headers['x-real-ip'] as string) ||
       req.connection.remoteAddress ||
       req.socket.remoteAddress ||
       req.ip ||
@@ -320,7 +352,11 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   }
 
-  private sendRateLimitResponse(res: Response, rejRes: RateLimiterRes, customMessage?: string): void {
+  private sendRateLimitResponse(
+    res: Response,
+    rejRes: RateLimiterRes,
+    customMessage?: string,
+  ): void {
     res.status(HttpStatus.TOO_MANY_REQUESTS).json({
       statusCode: HttpStatus.TOO_MANY_REQUESTS,
       message: customMessage || this.config.message,
@@ -345,7 +381,7 @@ export class DDoSProtectionMiddleware implements NestMiddleware {
     // - Send email alert
     // - Log to security monitoring system
     // - Update firewall rules automatically
-    
+
     this.logger.error(`🚨 DDoS ATTACK ALERT 🚨`, {
       attackerIP: ip,
       timestamp: new Date().toISOString(),

@@ -118,7 +118,7 @@ describe('Appointment Entity', () => {
 
       it('should throw error when confirming non-pending appointment', () => {
         const confirmed = appointment.confirm();
-        
+
         expect(() => {
           confirmed.confirm();
         }).toThrow('Appointment cannot be confirmed in current state');

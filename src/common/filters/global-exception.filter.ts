@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/restrict-template-expressions */
 import {
   ExceptionFilter,
   Catch,
@@ -7,7 +8,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { PrismaClientKnownRequestError, PrismaClientValidationError } from '@prisma/client/runtime/library';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+} from '@prisma/client/runtime/library';
 
 export interface ErrorResponse {
   statusCode: number;
@@ -30,42 +34,57 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const errorResponse = this.buildErrorResponse(exception, request);
-    
+
     // Log error with different levels based on status code
     this.logError(exception, errorResponse, request);
 
     response.status(errorResponse.statusCode).json(errorResponse);
   }
 
-  private buildErrorResponse(exception: unknown, request: Request): ErrorResponse {
+  private buildErrorResponse(
+    exception: unknown,
+    request: Request,
+  ): ErrorResponse {
     const timestamp = new Date().toISOString();
     const path = request.url;
     const method = request.method;
-    const correlationId = request.headers['x-correlation-id'] as string || this.generateCorrelationId();
+    const correlationId =
+      (request.headers['x-correlation-id'] as string) ||
+      this.generateCorrelationId();
 
     // Handle HTTP Exceptions (NestJS built-in)
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      
+
       return {
         statusCode: status,
         timestamp,
         path,
         method,
-        message: typeof exceptionResponse === 'string' 
-          ? exceptionResponse 
-          : (exceptionResponse as any).message || exception.message,
-        error: typeof exceptionResponse === 'string' 
-          ? HttpStatus[status] || 'Unknown Error'
-          : (exceptionResponse as any).error || HttpStatus[status] || 'Unknown Error',
+        message:
+          typeof exceptionResponse === 'string'
+            ? exceptionResponse
+            : (exceptionResponse as any).message || exception.message,
+        error:
+          typeof exceptionResponse === 'string'
+            ? HttpStatus[status] || 'Unknown Error'
+            : (exceptionResponse as any).error ||
+              HttpStatus[status] ||
+              'Unknown Error',
         correlationId,
       };
     }
 
     // Handle Prisma Errors
     if (exception instanceof PrismaClientKnownRequestError) {
-      return this.handlePrismaKnownError(exception, timestamp, path, method, correlationId);
+      return this.handlePrismaKnownError(
+        exception,
+        timestamp,
+        path,
+        method,
+        correlationId,
+      );
     }
 
     if (exception instanceof PrismaClientValidationError) {
@@ -83,28 +102,32 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     // Handle generic errors
     const isProduction = process.env.NODE_ENV === 'production';
-    
+
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       timestamp,
       path,
       method,
-      message: isProduction ? 'Internal server error' : (exception as Error)?.message || 'Unknown error',
+      message: isProduction
+        ? 'Internal server error'
+        : (exception as Error)?.message || 'Unknown error',
       error: 'Internal Server Error',
-      details: isProduction ? undefined : {
-        stack: (exception as Error)?.stack,
-        name: (exception as Error)?.name,
-      },
+      details: isProduction
+        ? undefined
+        : {
+            stack: (exception as Error)?.stack,
+            name: (exception as Error)?.name,
+          },
       correlationId,
     };
   }
 
   private handlePrismaKnownError(
-    exception: PrismaClientKnownRequestError, 
-    timestamp: string, 
-    path: string, 
+    exception: PrismaClientKnownRequestError,
+    timestamp: string,
+    path: string,
     method: string,
-    correlationId: string
+    correlationId: string,
   ): ErrorResponse {
     switch (exception.code) {
       case 'P2002':
@@ -118,7 +141,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           details: this.extractPrismaErrorDetails(exception),
           correlationId,
         };
-      
+
       case 'P2025':
         return {
           statusCode: HttpStatus.NOT_FOUND,
@@ -130,7 +153,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           details: this.extractPrismaErrorDetails(exception),
           correlationId,
         };
-      
+
       case 'P2003':
         return {
           statusCode: HttpStatus.BAD_REQUEST,
@@ -142,7 +165,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           details: this.extractPrismaErrorDetails(exception),
           correlationId,
         };
-      
+
       case 'P2014':
         return {
           statusCode: HttpStatus.BAD_REQUEST,
@@ -154,7 +177,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           details: this.extractPrismaErrorDetails(exception),
           correlationId,
         };
-      
+
       default:
         return {
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -163,21 +186,26 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           method,
           message: 'Database operation failed',
           error: 'Database Error',
-          details: process.env.NODE_ENV === 'production' ? undefined : this.extractPrismaErrorDetails(exception),
+          details:
+            process.env.NODE_ENV === 'production'
+              ? undefined
+              : this.extractPrismaErrorDetails(exception),
           correlationId,
         };
     }
   }
 
-  private extractPrismaErrorDetails(exception: PrismaClientKnownRequestError): any {
+  private extractPrismaErrorDetails(
+    exception: PrismaClientKnownRequestError,
+  ): any {
     const isProduction = process.env.NODE_ENV === 'production';
-    
+
     if (isProduction) {
       return {
         code: exception.code,
       };
     }
-    
+
     return {
       code: exception.code,
       meta: exception.meta,
@@ -185,11 +213,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private logError(exception: unknown, errorResponse: ErrorResponse, request: Request): void {
+  private logError(
+    exception: unknown,
+    errorResponse: ErrorResponse,
+    request: Request,
+  ): void {
     const { statusCode, correlationId, message } = errorResponse;
     const userAgent = request.headers['user-agent'] || 'Unknown';
     const ip = request.ip || 'Unknown';
-    
+
     const logContext = {
       correlationId,
       method: request.method,
@@ -205,18 +237,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (statusCode >= 500) {
       this.logger.error(
         `Server Error: ${message}`,
-        exception instanceof Error ? exception.stack : JSON.stringify(exception),
-        JSON.stringify(logContext)
+        exception instanceof Error
+          ? exception.stack
+          : JSON.stringify(exception),
+        JSON.stringify(logContext),
       );
     } else if (statusCode >= 400) {
-      this.logger.warn(
-        `Client Error: ${message}`,
-        JSON.stringify(logContext)
-      );
+      this.logger.warn(`Client Error: ${message}`, JSON.stringify(logContext));
     } else {
       this.logger.log(
         `Request completed: ${message}`,
-        JSON.stringify(logContext)
+        JSON.stringify(logContext),
       );
     }
   }

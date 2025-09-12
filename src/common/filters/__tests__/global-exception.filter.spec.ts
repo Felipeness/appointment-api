@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { GlobalExceptionFilter, ErrorResponse } from '../global-exception.filter';
+import { GlobalExceptionFilter } from '../global-exception.filter';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
-  
+
   const mockRequest = {
     url: '/test',
     method: 'GET',
@@ -34,7 +35,7 @@ describe('GlobalExceptionFilter', () => {
     }).compile();
 
     filter = module.get<GlobalExceptionFilter>(GlobalExceptionFilter);
-    
+
     // Reset mocks
     jest.clearAllMocks();
   });
@@ -46,7 +47,7 @@ describe('GlobalExceptionFilter', () => {
   describe('HTTP Exceptions', () => {
     it('should handle HttpException correctly', () => {
       const exception = new HttpException('Test error', HttpStatus.BAD_REQUEST);
-      
+
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -59,7 +60,7 @@ describe('GlobalExceptionFilter', () => {
           method: 'GET',
           timestamp: expect.any(String),
           correlationId: expect.any(String),
-        })
+        }),
       );
     });
 
@@ -68,15 +69,18 @@ describe('GlobalExceptionFilter', () => {
         message: ['field1 error', 'field2 error'],
         error: 'Validation Error',
       };
-      const exception = new HttpException(exceptionResponse, HttpStatus.BAD_REQUEST);
-      
+      const exception = new HttpException(
+        exceptionResponse,
+        HttpStatus.BAD_REQUEST,
+      );
+
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           message: ['field1 error', 'field2 error'],
           error: 'Validation Error',
-        })
+        }),
       );
     });
   });
@@ -89,9 +93,9 @@ describe('GlobalExceptionFilter', () => {
           code: 'P2002',
           clientVersion: '5.0.0',
           meta: { target: ['email'] },
-        }
+        },
       );
-      
+
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
@@ -103,20 +107,17 @@ describe('GlobalExceptionFilter', () => {
           details: expect.objectContaining({
             code: 'P2002',
           }),
-        })
+        }),
       );
     });
 
     it('should handle P2025 (record not found) error', () => {
-      const exception = new PrismaClientKnownRequestError(
-        'Record not found',
-        {
-          code: 'P2025',
-          clientVersion: '5.0.0',
-          meta: {},
-        }
-      );
-      
+      const exception = new PrismaClientKnownRequestError('Record not found', {
+        code: 'P2025',
+        clientVersion: '5.0.0',
+        meta: {},
+      });
+
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
@@ -125,7 +126,7 @@ describe('GlobalExceptionFilter', () => {
           statusCode: HttpStatus.NOT_FOUND,
           message: 'Record not found',
           error: 'Not Found',
-        })
+        }),
       );
     });
   });
@@ -134,12 +135,14 @@ describe('GlobalExceptionFilter', () => {
     it('should handle generic Error in development', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
-      
+
       const exception = new Error('Generic error message');
-      
+
       filter.catch(exception, mockArgumentsHost as any);
 
-      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(mockResponse.status).toHaveBeenCalledWith(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
@@ -149,27 +152,27 @@ describe('GlobalExceptionFilter', () => {
             stack: expect.any(String),
             name: 'Error',
           }),
-        })
+        }),
       );
-      
+
       process.env.NODE_ENV = originalEnv;
     });
 
     it('should handle generic Error in production', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
-      
+
       const exception = new Error('Generic error message');
-      
+
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           message: 'Internal server error',
           details: undefined,
-        })
+        }),
       );
-      
+
       process.env.NODE_ENV = originalEnv;
     });
   });
@@ -178,27 +181,27 @@ describe('GlobalExceptionFilter', () => {
     it('should use correlation ID from request headers', () => {
       const correlationId = 'test-correlation-id';
       mockRequest.headers['x-correlation-id'] = correlationId;
-      
+
       const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           correlationId,
-        })
+        }),
       );
     });
 
     it('should generate correlation ID if not provided', () => {
       delete mockRequest.headers['x-correlation-id'];
-      
+
       const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
       filter.catch(exception, mockArgumentsHost as any);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
           correlationId: expect.any(String),
-        })
+        }),
       );
     });
   });

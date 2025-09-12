@@ -22,7 +22,7 @@ export enum SagaStatus {
   COMPLETED = 'COMPLETED',
   COMPENSATING = 'COMPENSATING',
   COMPENSATED = 'COMPENSATED',
-  FAILED = 'FAILED'
+  FAILED = 'FAILED',
 }
 
 export interface SagaExecution {

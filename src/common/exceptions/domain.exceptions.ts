@@ -2,7 +2,11 @@ import { HttpException, HttpStatus } from '@nestjs/common';
 
 // Base domain exception
 export abstract class DomainException extends HttpException {
-  constructor(message: string, statusCode: HttpStatus, public readonly code: string) {
+  constructor(
+    message: string,
+    statusCode: HttpStatus,
+    public readonly code: string,
+  ) {
     super(message, statusCode);
     this.name = this.constructor.name;
   }
@@ -14,7 +18,7 @@ export class AppointmentNotFoundException extends DomainException {
     super(
       `Appointment with ID '${appointmentId}' not found`,
       HttpStatus.NOT_FOUND,
-      'APPOINTMENT_NOT_FOUND'
+      'APPOINTMENT_NOT_FOUND',
     );
   }
 }
@@ -43,7 +47,7 @@ export class PatientNotFoundException extends DomainException {
     super(
       `Patient with identifier '${identifier}' not found`,
       HttpStatus.NOT_FOUND,
-      'PATIENT_NOT_FOUND'
+      'PATIENT_NOT_FOUND',
     );
   }
 }
@@ -60,7 +64,7 @@ export class PsychologistNotFoundException extends DomainException {
     super(
       `Psychologist with identifier '${identifier}' not found`,
       HttpStatus.NOT_FOUND,
-      'PSYCHOLOGIST_NOT_FOUND'
+      'PSYCHOLOGIST_NOT_FOUND',
     );
   }
 }
@@ -96,7 +100,7 @@ export class ExternalServiceException extends DomainException {
     super(
       `External service '${service}' error: ${message}`,
       HttpStatus.BAD_GATEWAY,
-      'EXTERNAL_SERVICE_ERROR'
+      'EXTERNAL_SERVICE_ERROR',
     );
   }
 }
@@ -106,7 +110,7 @@ export class MessageQueueException extends DomainException {
     super(
       `Message queue error: ${message}`,
       HttpStatus.INTERNAL_SERVER_ERROR,
-      'MESSAGE_QUEUE_ERROR'
+      'MESSAGE_QUEUE_ERROR',
     );
   }
 }
@@ -116,7 +120,7 @@ export class DatabaseConnectionException extends DomainException {
     super(
       `Database connection error: ${message}`,
       HttpStatus.INTERNAL_SERVER_ERROR,
-      'DATABASE_CONNECTION_ERROR'
+      'DATABASE_CONNECTION_ERROR',
     );
   }
 }
@@ -126,17 +130,17 @@ export class ValidationError {
   constructor(
     public readonly field: string,
     public readonly message: string,
-    public readonly value?: any
+    public readonly value?: any,
   ) {}
 }
 
 export class MultipleValidationException extends DomainException {
   constructor(public readonly errors: ValidationError[]) {
-    const messages = errors.map(error => `${error.field}: ${error.message}`);
+    const messages = errors.map((error) => `${error.field}: ${error.message}`);
     super(
       `Validation failed: ${messages.join(', ')}`,
       HttpStatus.BAD_REQUEST,
-      'MULTIPLE_VALIDATION_ERRORS'
+      'MULTIPLE_VALIDATION_ERRORS',
     );
   }
 }

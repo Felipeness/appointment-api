@@ -17,7 +17,7 @@ export class OutboxService {
 
   constructor(
     private readonly outboxRepository: OutboxRepository,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -26,7 +26,7 @@ export class OutboxService {
    */
   async saveEventInTransaction(
     event: DomainEvent,
-    businessOperation: (prismaTransaction: any) => Promise<any>
+    businessOperation: (prismaTransaction: any) => Promise<any>,
   ): Promise<void> {
     await this.prisma.$transaction(async (prisma) => {
       // Execute business operation first
@@ -38,7 +38,7 @@ export class OutboxService {
         event.aggregateId,
         event.aggregateType,
         event.eventType,
-        event.eventData
+        event.eventData,
       );
 
       await prisma.outboxEvent.create({
@@ -56,7 +56,9 @@ export class OutboxService {
         },
       });
 
-      this.logger.log(`Event stored in outbox: ${event.eventType} for ${event.aggregateId}`);
+      this.logger.log(
+        `Event stored in outbox: ${event.eventType} for ${event.aggregateId}`,
+      );
     });
   }
 
@@ -70,7 +72,7 @@ export class OutboxService {
       event.aggregateId,
       event.aggregateType,
       event.eventType,
-      event.eventData
+      event.eventData,
     );
 
     return await this.outboxRepository.save(outboxEvent);
@@ -78,8 +80,8 @@ export class OutboxService {
 
   async markEventAsProcessing(eventId: string): Promise<OutboxEventEntity> {
     const events = await this.outboxRepository.findByAggregateId(eventId);
-    const event = events.find(e => e.id === eventId);
-    
+    const event = events.find((e) => e.id === eventId);
+
     if (!event) {
       throw new Error(`Outbox event not found: ${eventId}`);
     }
@@ -90,8 +92,8 @@ export class OutboxService {
 
   async markEventAsProcessed(eventId: string): Promise<OutboxEventEntity> {
     const events = await this.outboxRepository.findByAggregateId(eventId);
-    const event = events.find(e => e.id === eventId);
-    
+    const event = events.find((e) => e.id === eventId);
+
     if (!event) {
       throw new Error(`Outbox event not found: ${eventId}`);
     }
@@ -100,10 +102,13 @@ export class OutboxService {
     return await this.outboxRepository.update(processedEvent);
   }
 
-  async markEventAsFailed(eventId: string, error: string): Promise<OutboxEventEntity> {
+  async markEventAsFailed(
+    eventId: string,
+    error: string,
+  ): Promise<OutboxEventEntity> {
     const events = await this.outboxRepository.findByAggregateId(eventId);
-    const event = events.find(e => e.id === eventId);
-    
+    const event = events.find((e) => e.id === eventId);
+
     if (!event) {
       throw new Error(`Outbox event not found: ${eventId}`);
     }
@@ -117,7 +122,8 @@ export class OutboxService {
   }
 
   async cleanupProcessedEvents(olderThanDays: number = 7): Promise<number> {
-    const deletedCount = await this.outboxRepository.deleteProcessedEvents(olderThanDays);
+    const deletedCount =
+      await this.outboxRepository.deleteProcessedEvents(olderThanDays);
     this.logger.log(`Cleaned up ${deletedCount} processed outbox events`);
     return deletedCount;
   }

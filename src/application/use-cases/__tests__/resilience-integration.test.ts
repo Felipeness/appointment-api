@@ -3,7 +3,10 @@ import { ResilientProcessAppointmentUseCase } from '../resilient-process-appoint
 import { ProcessAppointmentUseCase } from '../process-appointment.use-case';
 import { SagaOrchestrator } from '../../../common/saga/saga-orchestrator';
 import { DeadLetterQueueHandler } from '../../../common/resilience/dlq-handler';
-import { CircuitBreaker, CircuitBreakerState } from '../../../common/resilience/circuit-breaker';
+import {
+  CircuitBreaker,
+  CircuitBreakerState,
+} from '../../../common/resilience/circuit-breaker';
 import { ResilientPrismaService } from '../../../infrastructure/database/resilient-prisma.service';
 import { OutboxService } from '../../../infrastructure/database/outbox/outbox.service';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
@@ -78,7 +81,9 @@ describe('Resilience Integration Tests', () => {
     );
     sagaOrchestrator = module.get<SagaOrchestrator>(SagaOrchestrator);
     dlqHandler = module.get<DeadLetterQueueHandler>(DeadLetterQueueHandler);
-    resilientPrisma = module.get<ResilientPrismaService>(ResilientPrismaService);
+    resilientPrisma = module.get<ResilientPrismaService>(
+      ResilientPrismaService,
+    );
 
     // Create separate circuit breaker for testing
     circuitBreaker = new CircuitBreaker('test-circuit', {
@@ -120,12 +125,14 @@ describe('Resilience Integration Tests', () => {
         isAvailableAt: jest.fn().mockReturnValue(true),
       });
 
-      mockAppointmentRepository.findByPsychologistAndDate.mockResolvedValue(null);
+      mockAppointmentRepository.findByPsychologistAndDate.mockResolvedValue(
+        null,
+      );
       mockOutboxService.saveEventInTransaction.mockResolvedValue(undefined);
 
       // Act & Assert
       await expect(
-        resilientProcessor.executeWithResilience(appointmentMessage)
+        resilientProcessor.executeWithResilience(appointmentMessage),
       ).resolves.not.toThrow();
 
       expect(mockPatientRepository.save).toHaveBeenCalled();
@@ -173,56 +180,72 @@ describe('Resilience Integration Tests', () => {
   describe('Circuit Breaker Tests', () => {
     it('should open circuit after failure threshold', async () => {
       // Arrange - Create failing operation
-      const failingOperation = jest.fn().mockRejectedValue(new Error('Database error'));
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       // Act - Trigger failures
       for (let i = 0; i < 3; i++) {
         try {
           await circuitBreaker.execute(failingOperation);
-        } catch (error) {
+        } catch {
           // Expected to fail
         }
       }
 
       // Assert
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.OPEN);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.OPEN,
+      );
       expect(circuitBreaker.getHealthStatus().isHealthy).toBe(false);
     });
 
     it('should transition to half-open after timeout', async () => {
       // Arrange - Open the circuit
-      const failingOperation = jest.fn().mockRejectedValue(new Error('Database error'));
-      
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
+
       for (let i = 0; i < 3; i++) {
         try {
           await circuitBreaker.execute(failingOperation);
-        } catch (error) {}
+        } catch {
+          // Expected to fail
+        }
       }
 
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.OPEN);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.OPEN,
+      );
 
       // Act - Wait for recovery timeout
-      await new Promise(resolve => setTimeout(resolve, 1100));
+      await new Promise((resolve) => setTimeout(resolve, 1100));
 
       // Try operation (should be allowed in HALF_OPEN)
       const successOperation = jest.fn().mockResolvedValue('success');
       await circuitBreaker.execute(successOperation);
 
       // Assert
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.CLOSED);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.CLOSED,
+      );
       expect(circuitBreaker.getHealthStatus().isHealthy).toBe(true);
     });
 
     it('should reset circuit breaker manually', () => {
       // Arrange - Open the circuit
       circuitBreaker.forceOpen();
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.OPEN);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.OPEN,
+      );
 
       // Act
       circuitBreaker.forceClose();
 
       // Assert
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.CLOSED);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.CLOSED,
+      );
       expect(circuitBreaker.getHealthStatus().isHealthy).toBe(true);
     });
   });
@@ -238,7 +261,7 @@ describe('Resilience Integration Tests', () => {
         originalMessage,
         error,
         1,
-        'appointment-processing'
+        'appointment-processing',
       );
 
       // Assert - Should schedule retry (not send to DLQ yet)
@@ -256,7 +279,7 @@ describe('Resilience Integration Tests', () => {
         originalMessage,
         error,
         3, // Exceeds maxRetries of 2
-        'appointment-processing'
+        'appointment-processing',
       );
 
       // Assert - Should be sent to DLQ (in logs)
@@ -303,6 +326,7 @@ describe('Resilience Integration Tests', () => {
 
       // Assert
       expect(healthCheck.database).toBe(false);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(healthCheck.connectionCircuitBreaker.isHealthy).toBe(false);
     });
   });
@@ -336,7 +360,9 @@ describe('Resilience Integration Tests', () => {
         isAvailableAt: jest.fn().mockReturnValue(true),
       });
 
-      mockAppointmentRepository.findByPsychologistAndDate.mockResolvedValue(null);
+      mockAppointmentRepository.findByPsychologistAndDate.mockResolvedValue(
+        null,
+      );
 
       // Act - First attempt should fail and trigger DLQ handling
       await resilientProcessor.executeWithResilience(appointmentMessage, 1);

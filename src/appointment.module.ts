@@ -40,7 +40,7 @@ import { INJECTION_TOKENS } from './shared/constants/injection-tokens';
     // Database services
     PrismaService,
     ResilientPrismaService,
-    
+
     // Enterprise SQS as the primary message queue service
     {
       provide: INJECTION_TOKENS.MESSAGE_QUEUE,
@@ -56,7 +56,7 @@ import { INJECTION_TOKENS } from './shared/constants/injection-tokens';
     DeadLetterQueueHandler,
     OutboxService,
     OutboxRepository,
-    
+
     // Repository implementations
     {
       provide: INJECTION_TOKENS.PSYCHOLOGIST_REPOSITORY,
@@ -85,20 +85,20 @@ import { INJECTION_TOKENS } from './shared/constants/injection-tokens';
     // Core services
     PrismaService,
     ResilientPrismaService,
-    
+
     // Repository tokens
     INJECTION_TOKENS.PSYCHOLOGIST_REPOSITORY,
     INJECTION_TOKENS.PATIENT_REPOSITORY,
     INJECTION_TOKENS.APPOINTMENT_REPOSITORY,
-    
+
     // Queue service (now enterprise only)
     INJECTION_TOKENS.MESSAGE_QUEUE,
     INJECTION_TOKENS.ENTERPRISE_MESSAGE_QUEUE,
-    
+
     // Use cases
     EnterpriseScheduleAppointmentUseCase,
     ResilientProcessAppointmentUseCase,
-    
+
     // Resilience components
     SagaOrchestrator,
     DeadLetterQueueHandler,

@@ -3,7 +3,11 @@ import { WorkingHours } from '../working-hours.vo';
 describe('WorkingHours Value Object', () => {
   describe('constructor', () => {
     it('should create valid working hours', () => {
-      const workingHours = new WorkingHours({ startTime: '08:00', endTime: '18:00', workingDays: [1, 2, 3, 4, 5] });
+      const workingHours = new WorkingHours({
+        startTime: '08:00',
+        endTime: '18:00',
+        workingDays: [1, 2, 3, 4, 5],
+      });
 
       expect(workingHours.startTime).toBe('08:00');
       expect(workingHours.endTime).toBe('18:00');
@@ -12,37 +16,61 @@ describe('WorkingHours Value Object', () => {
 
     it('should throw error for invalid start time format', () => {
       expect(() => {
-        new WorkingHours({ startTime: '25:00', endTime: '18:00', workingDays: [1, 2, 3, 4, 5] });
+        new WorkingHours({
+          startTime: '25:00',
+          endTime: '18:00',
+          workingDays: [1, 2, 3, 4, 5],
+        });
       }).toThrow('Invalid start time format. Expected HH:MM');
     });
 
     it('should throw error for invalid end time format', () => {
       expect(() => {
-        new WorkingHours({ startTime: '08:00', endTime: '25:00', workingDays: [1, 2, 3, 4, 5] });
+        new WorkingHours({
+          startTime: '08:00',
+          endTime: '25:00',
+          workingDays: [1, 2, 3, 4, 5],
+        });
       }).toThrow('Invalid end time format. Expected HH:MM');
     });
 
     it('should throw error when start time is after end time', () => {
       expect(() => {
-        new WorkingHours({ startTime: '18:00', endTime: '08:00', workingDays: [1, 2, 3, 4, 5] });
+        new WorkingHours({
+          startTime: '18:00',
+          endTime: '08:00',
+          workingDays: [1, 2, 3, 4, 5],
+        });
       }).toThrow('Start time must be before end time');
     });
 
     it('should throw error for empty working days', () => {
       expect(() => {
-        new WorkingHours({ startTime: '08:00', endTime: '18:00', workingDays: [] });
+        new WorkingHours({
+          startTime: '08:00',
+          endTime: '18:00',
+          workingDays: [],
+        });
       }).toThrow('At least one working day must be specified');
     });
 
     it('should throw error for invalid working day', () => {
       expect(() => {
-        new WorkingHours({ startTime: '08:00', endTime: '18:00', workingDays: [1, 2, 3, 4, 7] });
+        new WorkingHours({
+          startTime: '08:00',
+          endTime: '18:00',
+          workingDays: [1, 2, 3, 4, 7],
+        });
       }).toThrow('Working days must be between 0 (Sunday) and 6 (Saturday)');
     });
   });
 
   describe('isWorkingDay', () => {
-    const workingHours = new WorkingHours({ startTime: '08:00', endTime: '18:00', workingDays: [1, 2, 3, 4, 5] });
+    const workingHours = new WorkingHours({
+      startTime: '08:00',
+      endTime: '18:00',
+      workingDays: [1, 2, 3, 4, 5],
+    });
 
     it('should return true for Monday (1)', () => {
       const monday = new Date('2024-01-01'); // Monday
@@ -56,7 +84,11 @@ describe('WorkingHours Value Object', () => {
   });
 
   describe('isWithinWorkingHours', () => {
-    const workingHours = new WorkingHours({ startTime: '08:00', endTime: '18:00', workingDays: [1, 2, 3, 4, 5] });
+    const workingHours = new WorkingHours({
+      startTime: '08:00',
+      endTime: '18:00',
+      workingDays: [1, 2, 3, 4, 5],
+    });
 
     it('should return true for time within working hours', () => {
       expect(workingHours.isWithinWorkingHours('10:00')).toBe(true);
@@ -72,7 +104,11 @@ describe('WorkingHours Value Object', () => {
   });
 
   describe('isAvailableAt', () => {
-    const workingHours = new WorkingHours({ startTime: '08:00', endTime: '18:00', workingDays: [1, 2, 3, 4, 5] });
+    const workingHours = new WorkingHours({
+      startTime: '08:00',
+      endTime: '18:00',
+      workingDays: [1, 2, 3, 4, 5],
+    });
 
     it('should return true for working day within working hours', () => {
       const mondayMorning = new Date('2024-01-01 10:00:00'); // Monday 10:00

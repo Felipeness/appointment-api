@@ -3,12 +3,19 @@ export class WorkingHours {
   public readonly endTime: string;
   public readonly workingDays: number[];
 
-  constructor(data: string | { startTime: string; endTime: string; workingDays: number[] }) {
+  constructor(
+    data:
+      | string
+      | { startTime: string; endTime: string; workingDays: number[] },
+  ) {
     if (typeof data === 'string') {
-      const parsed = JSON.parse(data || '{"startTime": "09:00", "endTime": "17:00", "workingDays": [1,2,3,4,5]}');
-      this.startTime = parsed.startTime || "09:00";
-      this.endTime = parsed.endTime || "17:00";
-      this.workingDays = parsed.workingDays || [1,2,3,4,5];
+      const parsed = JSON.parse(
+        data ||
+          '{"startTime": "09:00", "endTime": "17:00", "workingDays": [1,2,3,4,5]}',
+      );
+      this.startTime = parsed.startTime || '09:00';
+      this.endTime = parsed.endTime || '17:00';
+      this.workingDays = parsed.workingDays || [1, 2, 3, 4, 5];
     } else {
       this.startTime = data.startTime;
       this.endTime = data.endTime;
@@ -21,7 +28,7 @@ export class WorkingHours {
     if (!this.isValidTime(this.startTime)) {
       throw new Error('Invalid start time format. Expected HH:MM');
     }
-    
+
     if (!this.isValidTime(this.endTime)) {
       throw new Error('Invalid end time format. Expected HH:MM');
     }
@@ -34,8 +41,10 @@ export class WorkingHours {
       throw new Error('At least one working day must be specified');
     }
 
-    if (!this.workingDays.every(day => day >= 0 && day <= 6)) {
-      throw new Error('Working days must be between 0 (Sunday) and 6 (Saturday)');
+    if (!this.workingDays.every((day) => day >= 0 && day <= 6)) {
+      throw new Error(
+        'Working days must be between 0 (Sunday) and 6 (Saturday)',
+      );
     }
   }
 

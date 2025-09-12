@@ -24,7 +24,7 @@ export class Appointment {
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date(),
     public readonly confirmedAt?: Date,
-    public readonly completedAt?: Date
+    public readonly completedAt?: Date,
   ) {
     this.validate();
   }
@@ -70,9 +70,10 @@ export class Appointment {
 
   public canBeCancelled(): boolean {
     return (
-      this.status === AppointmentStatus.CONFIRMED ||
-      this.status === AppointmentStatus.PENDING
-    ) && !this.isPast();
+      (this.status === AppointmentStatus.CONFIRMED ||
+        this.status === AppointmentStatus.PENDING) &&
+      !this.isPast()
+    );
   }
 
   public canBeCompleted(): boolean {
@@ -106,7 +107,7 @@ export class Appointment {
       this.createdAt,
       new Date(),
       new Date(), // confirmedAt
-      this.completedAt
+      this.completedAt,
     );
   }
 
@@ -137,7 +138,7 @@ export class Appointment {
       this.createdAt,
       new Date(),
       this.confirmedAt,
-      this.completedAt
+      this.completedAt,
     );
   }
 
@@ -168,7 +169,7 @@ export class Appointment {
       this.createdAt,
       new Date(),
       this.confirmedAt,
-      this.completedAt
+      this.completedAt,
     );
   }
 
@@ -199,7 +200,7 @@ export class Appointment {
       this.createdAt,
       new Date(),
       this.confirmedAt,
-      new Date() // completedAt
+      new Date(), // completedAt
     );
   }
 }

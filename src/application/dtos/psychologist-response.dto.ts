@@ -21,7 +21,8 @@ export class PsychologistResponseDto {
 
   @ApiProperty({
     description: 'Working hours in JSON format',
-    example: '{"monday": [{"start": "09:00", "end": "17:00"}], "tuesday": [{"start": "09:00", "end": "17:00"}]}',
+    example:
+      '{"monday": [{"start": "09:00", "end": "17:00"}], "tuesday": [{"start": "09:00", "end": "17:00"}]}',
   })
   workingHours: string;
 
@@ -41,21 +42,22 @@ export class PsychologistResponseDto {
 
   @ApiProperty({
     description: 'Professional biography',
-    example: 'Specialized in cognitive behavioral therapy with 10 years of experience',
+    example:
+      'Specialized in cognitive behavioral therapy with 10 years of experience',
     required: false,
   })
   biography?: string;
 
   @ApiProperty({
     description: 'Minimum consultation fee',
-    example: 100.00,
+    example: 100.0,
     required: false,
   })
   consultationFeeMin?: number;
 
   @ApiProperty({
     description: 'Maximum consultation fee',
-    example: 200.00,
+    example: 200.0,
     required: false,
   })
   consultationFeeMax?: number;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import {
   Injectable,
   NestInterceptor,
@@ -15,10 +16,10 @@ export class CorrelationIdInterceptor implements NestInterceptor {
 
     // Generate or use existing correlation ID
     const correlationId = request.headers['x-correlation-id'] || uuidv4();
-    
+
     // Add to request for use in application
     request.correlationId = correlationId;
-    
+
     // Add to response headers
     response.setHeader('x-correlation-id', correlationId);
 

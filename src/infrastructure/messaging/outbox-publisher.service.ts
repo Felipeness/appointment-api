@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-misused-promises, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/require-await */
 import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import { OutboxService } from '../database/outbox/outbox.service';
 import { OutboxEventEntity } from '../database/outbox/outbox.entity';
@@ -13,7 +14,7 @@ export class OutboxPublisherService implements OnModuleInit {
   constructor(
     private readonly outboxService: OutboxService,
     @Inject(INJECTION_TOKENS.MESSAGE_QUEUE)
-    private readonly messageQueue: MessageQueue
+    private readonly messageQueue: MessageQueue,
   ) {}
 
   onModuleInit() {
@@ -28,7 +29,7 @@ export class OutboxPublisherService implements OnModuleInit {
 
   private startProcessing(): void {
     this.logger.log('Starting outbox event publisher');
-    
+
     // Process outbox events every 5 seconds
     this.processingInterval = setInterval(async () => {
       if (!this.isProcessing) {
@@ -37,9 +38,12 @@ export class OutboxPublisherService implements OnModuleInit {
     }, 5000);
 
     // Cleanup processed events every hour
-    setInterval(async () => {
-      await this.cleanupProcessedEvents();
-    }, 60 * 60 * 1000);
+    setInterval(
+      async () => {
+        await this.cleanupProcessedEvents();
+      },
+      60 * 60 * 1000,
+    );
   }
 
   private async processOutboxEvents(): Promise<void> {
@@ -58,9 +62,8 @@ export class OutboxPublisherService implements OnModuleInit {
       this.logger.log(`Processing ${pendingEvents.length} outbox events`);
 
       // Process events in parallel with limited concurrency
-      const promises = pendingEvents.map(event => this.processEvent(event));
+      const promises = pendingEvents.map((event) => this.processEvent(event));
       await Promise.allSettled(promises);
-
     } catch (error) {
       this.logger.error('Error processing outbox events', error);
     } finally {
@@ -78,23 +81,28 @@ export class OutboxPublisherService implements OnModuleInit {
 
       // Mark as processed
       await this.outboxService.markEventAsProcessed(event.id);
-      
-      this.logger.log(`Successfully published outbox event: ${event.eventType} for ${event.aggregateId}`);
 
+      this.logger.log(
+        `Successfully published outbox event: ${event.eventType} for ${event.aggregateId}`,
+      );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       this.logger.error(
         `Failed to publish outbox event: ${event.eventType} for ${event.aggregateId}`,
-        errorMessage
+        errorMessage,
       );
 
       // Mark as failed and check if we should retry
-      const failedEvent = await this.outboxService.markEventAsFailed(event.id, errorMessage);
-      
+      const failedEvent = await this.outboxService.markEventAsFailed(
+        event.id,
+        errorMessage,
+      );
+
       if (!failedEvent.canRetry()) {
         this.logger.error(
-          `Outbox event exceeded max retries: ${event.eventType} for ${event.aggregateId}`
+          `Outbox event exceeded max retries: ${event.eventType} for ${event.aggregateId}`,
         );
         // Here you could send to Dead Letter Queue or alert monitoring system
         await this.handleFailedEvent(failedEvent);
@@ -121,11 +129,13 @@ export class OutboxPublisherService implements OnModuleInit {
 
   private async handleFailedEvent(event: OutboxEventEntity): Promise<void> {
     // Send to Dead Letter Queue or monitoring system
-    this.logger.error(`Sending failed event to DLQ: ${event.eventType} for ${event.aggregateId}`);
-    
+    this.logger.error(
+      `Sending failed event to DLQ: ${event.eventType} for ${event.aggregateId}`,
+    );
+
     // You could implement a Dead Letter Queue publisher here
     // await this.deadLetterQueue.send(event);
-    
+
     // Or send alert to monitoring system
     // await this.alerting.sendAlert('OUTBOX_EVENT_FAILED', event);
   }
@@ -148,13 +158,13 @@ export class OutboxPublisherService implements OnModuleInit {
   }
 
   // Health check method
-  async getHealth(): Promise<{ 
-    isProcessing: boolean; 
-    pendingEvents: number; 
-    lastProcessed: Date 
+  async getHealth(): Promise<{
+    isProcessing: boolean;
+    pendingEvents: number;
+    lastProcessed: Date;
   }> {
     const pendingEvents = await this.outboxService.getPendingEvents(1);
-    
+
     return {
       isProcessing: this.isProcessing,
       pendingEvents: pendingEvents.length,

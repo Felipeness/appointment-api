@@ -1,4 +1,13 @@
-import { IsString, IsEmail, IsOptional, IsNotEmpty, IsNumber, Min, Max, IsBoolean, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsNotEmpty,
+  IsNumber,
+  Min,
+  Max,
+  IsUrl,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePsychologistDto {
@@ -19,7 +28,8 @@ export class CreatePsychologistDto {
 
   @ApiProperty({
     description: 'Working hours in JSON format',
-    example: '{"monday": [{"start": "09:00", "end": "17:00"}], "tuesday": [{"start": "09:00", "end": "17:00"}]}',
+    example:
+      '{"monday": [{"start": "09:00", "end": "17:00"}], "tuesday": [{"start": "09:00", "end": "17:00"}]}',
   })
   @IsString()
   @IsNotEmpty()
@@ -45,7 +55,8 @@ export class CreatePsychologistDto {
 
   @ApiProperty({
     description: 'Professional biography',
-    example: 'Specialized in cognitive behavioral therapy with 10 years of experience',
+    example:
+      'Specialized in cognitive behavioral therapy with 10 years of experience',
     required: false,
   })
   @IsOptional()
@@ -54,7 +65,7 @@ export class CreatePsychologistDto {
 
   @ApiProperty({
     description: 'Minimum consultation fee',
-    example: 100.00,
+    example: 100.0,
     required: false,
   })
   @IsOptional()
@@ -64,7 +75,7 @@ export class CreatePsychologistDto {
 
   @ApiProperty({
     description: 'Maximum consultation fee',
-    example: 200.00,
+    example: 200.0,
     required: false,
   })
   @IsOptional()

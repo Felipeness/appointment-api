@@ -4,7 +4,10 @@ import type { Message } from '@aws-sdk/client-sqs';
 import { ResilientProcessAppointmentUseCase } from '../../application/use-cases/resilient-process-appointment.use-case';
 import { DeadLetterQueueHandler } from '../../common/resilience/dlq-handler';
 import { EnterpriseMessage } from './enterprise-appointment.producer';
-import { ProcessAppointmentUseCase, AppointmentMessage } from '../../application/use-cases/process-appointment.use-case';
+import {
+  ProcessAppointmentUseCase,
+  AppointmentMessage,
+} from '../../application/use-cases/process-appointment.use-case';
 import { SQSIdempotencyService } from '../../common/services/sqs-idempotency.service';
 
 @Injectable()
@@ -27,9 +30,11 @@ export class EnterpriseAppointmentConsumer {
 
     try {
       // Check for duplicate message processing (idempotency)
-      const isAlreadyProcessed = await this.sqsIdempotencyService.isProcessed(message);
+      const isAlreadyProcessed =
+        await this.sqsIdempotencyService.isProcessed(message);
       if (isAlreadyProcessed) {
-        const record = await this.sqsIdempotencyService.getProcessingRecord(message);
+        const record =
+          await this.sqsIdempotencyService.getProcessingRecord(message);
         this.logger.log(`Skipping already processed message`, {
           messageId: message.MessageId,
           previousResult: record?.processingResult,
@@ -39,7 +44,8 @@ export class EnterpriseAppointmentConsumer {
       }
 
       // Validate message uniqueness
-      const uniqueness = await this.sqsIdempotencyService.validateMessageUniqueness(message);
+      const uniqueness =
+        await this.sqsIdempotencyService.validateMessageUniqueness(message);
       if (!uniqueness.isUnique) {
         this.logger.warn(`Detected duplicate message content, skipping`, {
           messageId: message.MessageId,
@@ -54,7 +60,7 @@ export class EnterpriseAppointmentConsumer {
 
       // Parse message body
       parsedMessage = JSON.parse(message.Body || '{}');
-      
+
       // Extract metadata for logging and tracing
       traceId = this.extractTraceId(message);
       messageType = this.extractMessageType(message);
@@ -68,30 +74,35 @@ export class EnterpriseAppointmentConsumer {
 
       // Route to appropriate processor based on message format
       if (this.isEnterpriseMessage(parsedMessage)) {
-        await this.processEnterpriseMessage(parsedMessage as EnterpriseMessage, traceId);
+        await this.processEnterpriseMessage(
+          parsedMessage as EnterpriseMessage,
+          traceId,
+        );
       } else {
         // Backward compatibility with legacy messages
-        await this.processLegacyMessage(parsedMessage as AppointmentMessage, traceId);
+        await this.processLegacyMessage(
+          parsedMessage as AppointmentMessage,
+          traceId,
+        );
       }
 
       const processingTime = Date.now() - startTime;
-      
+
       // Mark message as successfully processed
       await this.sqsIdempotencyService.markAsProcessed(message, 'success', {
         processingTimeMs: processingTime,
         traceId,
         messageType,
       });
-      
+
       this.logger.log(`Message processed successfully`, {
         messageId: message.MessageId,
         traceId,
         processingTimeMs: processingTime,
       });
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      
+
       // Mark message as failed for idempotency tracking
       await this.sqsIdempotencyService.markAsProcessed(message, 'failure', {
         processingTimeMs: processingTime,
@@ -99,7 +110,7 @@ export class EnterpriseAppointmentConsumer {
         errorMessage: error.message,
         errorStack: error.stack,
       });
-      
+
       this.logger.error(`Message processing failed`, {
         messageId: message.MessageId,
         traceId: traceId!,
@@ -113,7 +124,10 @@ export class EnterpriseAppointmentConsumer {
     }
   }
 
-  private async processEnterpriseMessage(message: EnterpriseMessage, traceId: string): Promise<void> {
+  private async processEnterpriseMessage(
+    message: EnterpriseMessage,
+    traceId: string,
+  ): Promise<void> {
     // Update retry count for monitoring
     const retryCount = (message.retryCount || 0) + 1;
     message.retryCount = retryCount;
@@ -133,7 +147,7 @@ export class EnterpriseAppointmentConsumer {
       case 'appointment.cancelled':
         await this.resilientProcessor.executeWithResilience(
           message.data as AppointmentMessage,
-          retryCount
+          retryCount,
         );
         break;
 
@@ -146,7 +160,10 @@ export class EnterpriseAppointmentConsumer {
     }
   }
 
-  private async processLegacyMessage(message: AppointmentMessage, traceId: string): Promise<void> {
+  private async processLegacyMessage(
+    message: AppointmentMessage,
+    traceId: string,
+  ): Promise<void> {
     this.logger.debug(`Processing legacy message format`, {
       appointmentId: message.appointmentId,
       traceId,
@@ -157,10 +174,13 @@ export class EnterpriseAppointmentConsumer {
   }
 
   @SqsConsumerEventHandler('appointment-consumer', 'processing_error')
-  public async onProcessingError(error: Error, message: Message): Promise<void> {
+  public async onProcessingError(
+    error: Error,
+    message: Message,
+  ): Promise<void> {
     const messageId = message.MessageId;
     const traceId = this.extractTraceId(message);
-    
+
     this.logger.error(`SQS message processing error`, {
       messageId,
       traceId,
@@ -173,15 +193,14 @@ export class EnterpriseAppointmentConsumer {
     try {
       const parsedMessage = JSON.parse(message.Body || '{}');
       const attemptCount = this.getAttemptCount(message);
-      
+
       // Send to our DLQ handler for additional processing
       await this.dlqHandler.handleFailedMessage(
         parsedMessage,
         error,
         attemptCount,
-        'appointment-processing'
+        'appointment-processing',
       );
-
     } catch (parseError) {
       this.logger.error(`Failed to parse message for DLQ processing`, {
         messageId,
@@ -206,7 +225,7 @@ export class EnterpriseAppointmentConsumer {
   @SqsConsumerEventHandler('appointment-consumer', 'timeout_error')
   public async onTimeoutError(error: Error, message: Message): Promise<void> {
     const traceId = this.extractTraceId(message);
-    
+
     this.logger.error(`Message processing timeout`, {
       messageId: message.MessageId,
       traceId,
@@ -219,7 +238,7 @@ export class EnterpriseAppointmentConsumer {
   public async onMessageReceived(message: Message): Promise<void> {
     const messageType = this.extractMessageType(message);
     const traceId = this.extractTraceId(message);
-    
+
     this.logger.debug(`Message received`, {
       messageId: message.MessageId,
       messageType,
@@ -231,7 +250,7 @@ export class EnterpriseAppointmentConsumer {
   @SqsConsumerEventHandler('appointment-consumer', 'message_processed')
   public async onMessageProcessed(message: Message): Promise<void> {
     const traceId = this.extractTraceId(message);
-    
+
     this.logger.debug(`Message processed and deleted`, {
       messageId: message.MessageId,
       traceId,
@@ -241,15 +260,18 @@ export class EnterpriseAppointmentConsumer {
 
   // Utility methods
   private extractTraceId(message: Message): string {
-    const traceId = message.MessageAttributes?.traceId?.StringValue ||
-                   message.MessageAttributes?.TraceId?.StringValue;
+    const traceId =
+      message.MessageAttributes?.traceId?.StringValue ||
+      message.MessageAttributes?.TraceId?.StringValue;
     return traceId || `generated_${message.MessageId}`;
   }
 
   private extractMessageType(message: Message): string {
-    return message.MessageAttributes?.messageType?.StringValue ||
-           message.MessageAttributes?.MessageType?.StringValue ||
-           'unknown';
+    return (
+      message.MessageAttributes?.messageType?.StringValue ||
+      message.MessageAttributes?.MessageType?.StringValue ||
+      'unknown'
+    );
   }
 
   private isEnterpriseMessage(message: any): boolean {

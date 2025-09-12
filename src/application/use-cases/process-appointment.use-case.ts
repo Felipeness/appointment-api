@@ -1,9 +1,4 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
-import {
-  PatientNotFoundException,
-  PsychologistNotFoundException,
-  MessageQueueException,
-} from '../../common/exceptions/domain.exceptions';
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
 
@@ -14,6 +9,11 @@ import type { PatientRepository } from '../../domain/repositories/patient.reposi
 import type { PsychologistRepository } from '../../domain/repositories/psychologist.repository';
 import { OutboxService } from '../../infrastructure/database/outbox/outbox.service';
 import { INJECTION_TOKENS } from '../../shared/constants/injection-tokens';
+import {
+  AppointmentType,
+  AppointmentStatus,
+  MeetingType,
+} from '../../domain/entities/enums';
 
 export interface AppointmentMessage {
   appointmentId: string;
@@ -48,8 +48,15 @@ export class ProcessAppointmentUseCase {
 
   async execute(message: AppointmentMessage): Promise<void> {
     try {
-      const { appointmentId, psychologistId, scheduledAt, patientEmail, patientName, patientPhone } = message;
-      
+      const {
+        appointmentId,
+        psychologistId,
+        scheduledAt,
+        patientEmail,
+        patientName,
+        patientPhone,
+      } = message;
+
       const scheduledDate = parseISO(scheduledAt);
 
       // Find or create patient
@@ -66,43 +73,70 @@ export class ProcessAppointmentUseCase {
       }
 
       // Validate psychologist exists and is active
-      const psychologist = await this.psychologistRepository.findById(psychologistId);
+      const psychologist =
+        await this.psychologistRepository.findById(psychologistId);
       if (!psychologist) {
-        await this.declineAppointment(appointmentId, patient!.id, psychologistId, scheduledDate, 'Psychologist not found');
+        await this.declineAppointment(
+          appointmentId,
+          patient.id,
+          psychologistId,
+          scheduledDate,
+          'Psychologist not found',
+        );
         return;
       }
 
       if (!psychologist.isActive) {
-        await this.declineAppointment(appointmentId, patient!.id, psychologistId, scheduledDate, 'Psychologist is not active');
+        await this.declineAppointment(
+          appointmentId,
+          patient.id,
+          psychologistId,
+          scheduledDate,
+          'Psychologist is not active',
+        );
         return;
       }
 
       // Check availability at processing time (not scheduling time)
-      const existingAppointment = await this.appointmentRepository.findByPsychologistAndDate(
-        psychologistId,
-        scheduledDate,
-      );
+      const existingAppointment =
+        await this.appointmentRepository.findByPsychologistAndDate(
+          psychologistId,
+          scheduledDate,
+        );
 
       if (existingAppointment) {
-        await this.declineAppointment(appointmentId, patient!.id, psychologistId, scheduledDate, 'Time slot no longer available');
+        await this.declineAppointment(
+          appointmentId,
+          patient.id,
+          psychologistId,
+          scheduledDate,
+          'Time slot no longer available',
+        );
         return;
       }
 
       if (!psychologist.isAvailableAt(scheduledDate)) {
-        await this.declineAppointment(appointmentId, patient!.id, psychologistId, scheduledDate, 'Psychologist not available at requested time');
+        await this.declineAppointment(
+          appointmentId,
+          patient.id,
+          psychologistId,
+          scheduledDate,
+          'Psychologist not available at requested time',
+        );
         return;
       }
 
       // All validations passed - confirm appointment
       const confirmedAppointment = new Appointment(
         appointmentId,
-        patient!.id,
+        patient.id,
         psychologistId,
         scheduledDate,
         message.duration || 60,
-        message.appointmentType as any,
-        'CONFIRMED' as any,
-        message.meetingType as any,
+        (message.appointmentType as AppointmentType) ||
+          AppointmentType.CONSULTATION,
+        AppointmentStatus.CONFIRMED,
+        (message.meetingType as MeetingType) || MeetingType.IN_PERSON,
         message.meetingUrl,
         message.meetingRoom,
         message.reason,
@@ -116,7 +150,7 @@ export class ProcessAppointmentUseCase {
         new Date(), // createdAt
         new Date(), // updatedAt
         new Date(), // confirmedAt
-        undefined  // completedAt
+        undefined, // completedAt
       );
 
       // Use Outbox Pattern for atomic save + event publishing
@@ -127,7 +161,7 @@ export class ProcessAppointmentUseCase {
           eventType: 'AppointmentConfirmed',
           eventData: {
             appointmentId,
-            patientId: patient!.id,
+            patientId: patient.id,
             psychologistId,
             scheduledAt: scheduledDate.toISOString(),
             status: 'CONFIRMED',
@@ -136,6 +170,7 @@ export class ProcessAppointmentUseCase {
         },
         async (prismaTransaction) => {
           // Save appointment within transaction
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           await prismaTransaction.appointment.create({
             data: {
               id: confirmedAppointment.id,
@@ -158,23 +193,27 @@ export class ProcessAppointmentUseCase {
               confirmedAt: confirmedAppointment.confirmedAt,
             },
           });
-        }
+        },
       );
-      
-      this.logger.log(`Appointment confirmed using Outbox Pattern: ${appointmentId}`);
 
+      this.logger.log(
+        `Appointment confirmed using Outbox Pattern: ${appointmentId}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to process appointment: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to process appointment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+      );
       throw error;
     }
   }
 
   private async declineAppointment(
-    appointmentId: string, 
-    patientId: string, 
-    psychologistId: string, 
-    scheduledDate: Date, 
-    reason: string
+    appointmentId: string,
+    patientId: string,
+    psychologistId: string,
+    scheduledDate: Date,
+    reason: string,
   ): Promise<void> {
     const declinedAppointment = new Appointment(
       appointmentId,
@@ -182,9 +221,9 @@ export class ProcessAppointmentUseCase {
       psychologistId,
       scheduledDate,
       60, // default duration
-      'CONSULTATION' as any,
-      'DECLINED' as any,
-      'IN_PERSON' as any,
+      AppointmentType.CONSULTATION,
+      AppointmentStatus.DECLINED,
+      MeetingType.IN_PERSON,
       undefined, // meetingUrl
       undefined, // meetingRoom
       undefined, // reason
@@ -198,7 +237,7 @@ export class ProcessAppointmentUseCase {
       new Date(), // createdAt
       new Date(), // updatedAt
       undefined, // confirmedAt
-      undefined  // completedAt
+      undefined, // completedAt
     );
 
     // Use Outbox Pattern for declined appointments too
@@ -219,6 +258,7 @@ export class ProcessAppointmentUseCase {
       },
       async (prismaTransaction) => {
         // Save declined appointment within transaction
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         await prismaTransaction.appointment.create({
           data: {
             id: declinedAppointment.id,
@@ -233,14 +273,23 @@ export class ProcessAppointmentUseCase {
             updatedAt: declinedAppointment.updatedAt,
           },
         });
-      }
+      },
     );
-    
-    this.logger.warn(`Appointment declined using Outbox Pattern: ${appointmentId} - ${reason}`);
+
+    this.logger.warn(
+      `Appointment declined using Outbox Pattern: ${appointmentId} - ${reason}`,
+    );
     await this.sendNotification(patientId, 'declined', reason);
   }
 
-  private async sendNotification(patientId: string, status: string, message: string): Promise<void> {
-    this.logger.log(`Notification sent to patient ${patientId}: ${status} - ${message}`);
+  // eslint-disable-next-line @typescript-eslint/require-await
+  private async sendNotification(
+    patientId: string,
+    status: string,
+    message: string,
+  ): Promise<void> {
+    this.logger.log(
+      `Notification sent to patient ${patientId}: ${status} - ${message}`,
+    );
   }
 }

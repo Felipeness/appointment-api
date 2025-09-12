@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { SQSIdempotencyService } from '../sqs-idempotency.service';
 import type { Message } from '@aws-sdk/client-sqs';
@@ -38,7 +42,9 @@ describe('SQSIdempotencyService', () => {
       expect(initialStatus).toBe(false);
 
       // Mark as processed
-      await service.markAsProcessed(message, 'success', { processingTime: 100 });
+      await service.markAsProcessed(message, 'success', {
+        processingTime: 100,
+      });
 
       // Now should be processed
       const processedStatus = await service.isProcessed(message);
@@ -111,7 +117,9 @@ describe('SQSIdempotencyService', () => {
       await service.markAsProcessed(message, 'success');
 
       // Expire the record
-      const storedRecord = (service as any).processedMessages.get('msg:expired-record');
+      const storedRecord = (service as any).processedMessages.get(
+        'msg:expired-record',
+      );
       storedRecord.expiresAt = new Date(Date.now() - 1000);
 
       const record = await service.getProcessingRecord(message);
@@ -143,7 +151,7 @@ describe('SQSIdempotencyService', () => {
 
     it('should handle string message bodies', () => {
       const stringMessage = 'simple string message';
-      
+
       const id1 = service.generateDeduplicationId(stringMessage);
       const id2 = service.generateDeduplicationId(stringMessage);
 
@@ -188,9 +196,9 @@ describe('SQSIdempotencyService', () => {
     });
 
     it('should prefer patient over psychologist when both present', () => {
-      const messageBody = { 
-        patientId: 'patient-123', 
-        psychologistId: 'psych-456' 
+      const messageBody = {
+        patientId: 'patient-123',
+        psychologistId: 'psych-456',
       };
 
       const groupId = service.generateMessageGroupId(messageBody);
@@ -309,9 +317,9 @@ describe('SQSIdempotencyService', () => {
   describe('cleanup process', () => {
     it('should manually clean up expired records', async () => {
       const message = createMockMessage('cleanup-test', { data: 'test' });
-      
+
       await service.markAsProcessed(message, 'success');
-      
+
       // Expire the record
       const record = (service as any).processedMessages.get('msg:cleanup-test');
       record.expiresAt = new Date(Date.now() - 1000);

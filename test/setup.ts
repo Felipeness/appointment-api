@@ -5,7 +5,7 @@ import { config } from 'dotenv';
 config({ path: '.env.test' });
 
 // Global test configuration
-beforeAll(async () => {
+beforeAll(() => {
   // Set test timeout
   jest.setTimeout(30000);
 });
@@ -13,7 +13,7 @@ beforeAll(async () => {
 // Global cleanup
 afterAll(async () => {
   // Cleanup resources if needed
-  await new Promise(resolve => setTimeout(resolve, 100));
+  await new Promise((resolve) => setTimeout(resolve, 100));
 });
 
 // Mock console methods in test environment
@@ -29,6 +29,7 @@ global.console = {
 
 // Global test utilities
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
       toBeValidDate(): R;
@@ -43,21 +44,22 @@ expect.extend({
     const pass = received instanceof Date && !isNaN(received.getTime());
     if (pass) {
       return {
-        message: () => `expected ${received} not to be a valid Date`,
+        message: () => `expected ${String(received)} not to be a valid Date`,
         pass: true,
       };
     } else {
       return {
-        message: () => `expected ${received} to be a valid Date`,
+        message: () => `expected ${String(received)} to be a valid Date`,
         pass: false,
       };
     }
   },
 
   toBeValidUUID(received: any) {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const pass = typeof received === 'string' && uuidRegex.test(received);
-    
+
     if (pass) {
       return {
         message: () => `expected ${received} not to be a valid UUID`,
@@ -73,12 +75,12 @@ expect.extend({
 });
 
 // Setup test database if needed
-export const setupTestDatabase = async () => {
+export const setupTestDatabase = () => {
   // Database setup logic here
   console.log('Setting up test database...');
 };
 
-export const teardownTestDatabase = async () => {
+export const teardownTestDatabase = () => {
   // Database cleanup logic here
   console.log('Tearing down test database...');
 };

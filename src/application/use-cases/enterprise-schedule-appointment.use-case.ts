@@ -3,9 +3,7 @@ import { CreateAppointmentDto } from '../dtos/create-appointment.dto';
 import { EnterpriseAppointmentProducer } from '../../infrastructure/messaging/enterprise-appointment.producer';
 import type { PsychologistRepository } from '../../domain/repositories/psychologist.repository';
 import { INJECTION_TOKENS } from '../../shared/constants/injection-tokens';
-import {
-  PsychologistNotFoundException,
-} from '../../common/exceptions/domain.exceptions';
+import { PsychologistNotFoundException } from '../../common/exceptions/domain.exceptions';
 import { v4 as uuidv4 } from 'uuid';
 import { addHours, isBefore } from 'date-fns';
 
@@ -20,7 +18,9 @@ export interface EnterpriseScheduleResult {
 
 @Injectable()
 export class EnterpriseScheduleAppointmentUseCase {
-  private readonly logger = new Logger(EnterpriseScheduleAppointmentUseCase.name);
+  private readonly logger = new Logger(
+    EnterpriseScheduleAppointmentUseCase.name,
+  );
 
   constructor(
     @Inject(INJECTION_TOKENS.ENTERPRISE_MESSAGE_QUEUE)
@@ -29,11 +29,14 @@ export class EnterpriseScheduleAppointmentUseCase {
     private readonly psychologistRepository: PsychologistRepository,
   ) {}
 
-  async execute(dto: CreateAppointmentDto, options?: {
-    priority?: 'high' | 'normal' | 'low';
-    traceId?: string;
-    userId?: string;
-  }): Promise<EnterpriseScheduleResult> {
+  async execute(
+    dto: CreateAppointmentDto,
+    options?: {
+      priority?: 'high' | 'normal' | 'low';
+      traceId?: string;
+      userId?: string;
+    },
+  ): Promise<EnterpriseScheduleResult> {
     const appointmentId = uuidv4();
     const traceId = options?.traceId || this.generateTraceId();
     const priority = this.determinePriority(dto, options?.priority);
@@ -94,13 +97,12 @@ export class EnterpriseScheduleAppointmentUseCase {
       });
 
       return result;
-
     } catch (error) {
       this.logger.error(`Failed to queue appointment`, {
         appointmentId,
         traceId,
-        error: error.message,
-        stack: error.stack,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
       });
 
       return {
@@ -113,15 +115,22 @@ export class EnterpriseScheduleAppointmentUseCase {
     }
   }
 
-  private async performPreQueueValidation(dto: CreateAppointmentDto, traceId: string): Promise<void> {
+  private async performPreQueueValidation(
+    dto: CreateAppointmentDto,
+    traceId: string,
+  ): Promise<void> {
     // 1. Validate psychologist exists (quick check)
-    const psychologist = await this.psychologistRepository.findById(dto.psychologistId);
+    const psychologist = await this.psychologistRepository.findById(
+      dto.psychologistId,
+    );
     if (!psychologist) {
       throw new PsychologistNotFoundException(dto.psychologistId);
     }
 
     if (!psychologist.isActive) {
-      throw new PsychologistNotFoundException(`Psychologist ${dto.psychologistId} is not active`);
+      throw new PsychologistNotFoundException(
+        `Psychologist ${dto.psychologistId} is not active`,
+      );
     }
 
     // 2. Validate 24-hour advance booking rule
@@ -129,7 +138,9 @@ export class EnterpriseScheduleAppointmentUseCase {
     const minimumBookingTime = addHours(new Date(), 24);
 
     if (isBefore(scheduledTime, minimumBookingTime)) {
-      throw new Error('Appointments must be scheduled at least 24 hours in advance');
+      throw new Error(
+        'Appointments must be scheduled at least 24 hours in advance',
+      );
     }
 
     this.logger.debug(`Pre-queue validation passed`, {
@@ -139,17 +150,23 @@ export class EnterpriseScheduleAppointmentUseCase {
     });
   }
 
-  private determinePriority(dto: CreateAppointmentDto, requestedPriority?: string): 'high' | 'normal' | 'low' {
+  private determinePriority(
+    dto: CreateAppointmentDto,
+    requestedPriority?: string,
+  ): 'high' | 'normal' | 'low' {
     // Business logic to determine message priority
     if (requestedPriority === 'high') return 'high';
-    
+
     // VIP patients or urgent appointments get high priority
-    if (dto.appointmentType === 'EMERGENCY' || dto.reason?.toLowerCase().includes('urgent')) {
+    if (
+      dto.appointmentType === ('EMERGENCY' as any) ||
+      dto.reason?.toLowerCase().includes('urgent')
+    ) {
       return 'high';
     }
 
     // Follow-up appointments get normal priority
-    if (dto.appointmentType === 'FOLLOW_UP') {
+    if (dto.appointmentType === ('FOLLOW_UP' as any)) {
       return 'normal';
     }
 
@@ -162,7 +179,10 @@ export class EnterpriseScheduleAppointmentUseCase {
     return `psychologist-${dto.psychologistId}`;
   }
 
-  private getDeduplicationId(appointmentId: string, dto: CreateAppointmentDto): string {
+  private getDeduplicationId(
+    appointmentId: string,
+    dto: CreateAppointmentDto,
+  ): string {
     // Prevent duplicate appointments for same patient+psychologist+time
     const dedupeKey = `${dto.patientEmail}-${dto.psychologistId}-${dto.scheduledAt}`;
     return `${appointmentId}-${Buffer.from(dedupeKey).toString('base64')}`;
@@ -170,10 +190,14 @@ export class EnterpriseScheduleAppointmentUseCase {
 
   private calculateDelaySeconds(priority: string): number {
     switch (priority) {
-      case 'high': return 0; // Process immediately
-      case 'normal': return 5; // Small delay to batch normal priority
-      case 'low': return 10; // Longer delay for low priority
-      default: return 5;
+      case 'high':
+        return 0; // Process immediately
+      case 'normal':
+        return 5; // Small delay to batch normal priority
+      case 'low':
+        return 10; // Longer delay for low priority
+      default:
+        return 5;
     }
   }
 
@@ -204,11 +228,14 @@ export class EnterpriseScheduleAppointmentUseCase {
   }
 
   // Batch scheduling for high-volume scenarios
-  async executeBatch(appointments: CreateAppointmentDto[], options?: {
-    priority?: 'high' | 'normal' | 'low';
-    traceId?: string;
-    batchId?: string;
-  }): Promise<EnterpriseScheduleResult[]> {
+  async executeBatch(
+    appointments: CreateAppointmentDto[],
+    options?: {
+      priority?: 'high' | 'normal' | 'low';
+      traceId?: string;
+      batchId?: string;
+    },
+  ): Promise<EnterpriseScheduleResult[]> {
     const batchId = options?.batchId || uuidv4();
     const traceId = options?.traceId || this.generateTraceId();
 
@@ -224,10 +251,12 @@ export class EnterpriseScheduleAppointmentUseCase {
     for (let i = 0; i < appointments.length; i += 10) {
       const batch = appointments.slice(i, i + 10);
       const batchResults = await Promise.allSettled(
-        batch.map(dto => this.execute(dto, { 
-          ...options,
-          traceId: `${traceId}-${i/10 + 1}`,
-        }))
+        batch.map((dto) =>
+          this.execute(dto, {
+            ...options,
+            traceId: `${traceId}-${i / 10 + 1}`,
+          }),
+        ),
       );
 
       batchResults.forEach((result, index) => {
@@ -247,7 +276,10 @@ export class EnterpriseScheduleAppointmentUseCase {
             batchId,
             traceId,
             appointmentIndex: i + index,
-            error: result.reason,
+            error:
+              result && typeof result === 'object' && 'reason' in result
+                ? (result as { reason: unknown }).reason
+                : 'Unknown error',
           });
         }
       });
@@ -256,8 +288,8 @@ export class EnterpriseScheduleAppointmentUseCase {
     this.logger.log(`Batch appointment scheduling completed`, {
       batchId,
       traceId,
-      successful: results.filter(r => r.status === 'queued').length,
-      failed: results.filter(r => r.status === 'failed').length,
+      successful: results.filter((r) => r.status === 'queued').length,
+      failed: results.filter((r) => r.status === 'failed').length,
     });
 
     return results;

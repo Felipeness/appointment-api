@@ -66,7 +66,7 @@ export class PrismaPatientRepository implements PatientRepository {
       patient.isActive,
       patient.createdAt,
       patient.updatedAt,
-      patient.lastActiveAt
+      patient.lastActiveAt,
     );
   }
 

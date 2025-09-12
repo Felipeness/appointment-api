@@ -3,7 +3,10 @@ import { AppointmentStatus } from '../entities/enums';
 
 export interface AppointmentRepository {
   findById(id: string): Promise<Appointment | null>;
-  findByPsychologistAndDate(psychologistId: string, scheduledAt: Date): Promise<Appointment | null>;
+  findByPsychologistAndDate(
+    psychologistId: string,
+    scheduledAt: Date,
+  ): Promise<Appointment | null>;
   findByPatientId(patientId: string): Promise<Appointment[]>;
   findByPsychologistId(psychologistId: string): Promise<Appointment[]>;
   findByStatus(status: AppointmentStatus): Promise<Appointment[]>;

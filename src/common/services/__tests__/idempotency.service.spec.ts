@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { RedisIdempotencyService } from '../idempotency.service';
 import { IdempotencyRecord } from '../interfaces/idempotency.interface';
@@ -40,8 +43,12 @@ describe('RedisIdempotencyService', () => {
 
       await service.store(record);
 
-      const retrieved = await service.get('test-key-123', 'user-123', 'POST:/appointments');
-      
+      const retrieved = await service.get(
+        'test-key-123',
+        'user-123',
+        'POST:/appointments',
+      );
+
       expect(retrieved).toBeDefined();
       expect(retrieved?.key).toBe(record.key);
       expect(retrieved?.userId).toBe(record.userId);
@@ -137,7 +144,10 @@ describe('RedisIdempotencyService', () => {
         data: { priority: 'high' },
       };
 
-      const isValid = await service.validateParameters('param-test', sameParameters);
+      const isValid = await service.validateParameters(
+        'param-test',
+        sameParameters,
+      );
       expect(isValid).toBe(true);
     });
 
@@ -150,14 +160,20 @@ describe('RedisIdempotencyService', () => {
         data: { priority: 'high' },
       };
 
-      const isValid = await service.validateParameters('param-test', differentParameters);
+      const isValid = await service.validateParameters(
+        'param-test',
+        differentParameters,
+      );
       expect(isValid).toBe(false);
     });
 
     it('should return true for non-existent key (new request)', async () => {
       const anyParameters = { test: 'value' };
-      
-      const isValid = await service.validateParameters('new-key', anyParameters);
+
+      const isValid = await service.validateParameters(
+        'new-key',
+        anyParameters,
+      );
       expect(isValid).toBe(true);
     });
 
@@ -171,7 +187,10 @@ describe('RedisIdempotencyService', () => {
         data: { priority: 'high' },
       };
 
-      const isValid = await service.validateParameters('param-test', reorderedParameters);
+      const isValid = await service.validateParameters(
+        'param-test',
+        reorderedParameters,
+      );
       expect(isValid).toBe(true); // Should be true because hashing normalizes order
     });
   });

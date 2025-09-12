@@ -1,15 +1,20 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { performance } from 'perf_hooks';
 import { EnterpriseAppointmentProducer } from '../../src/infrastructure/messaging/enterprise-appointment.producer';
-import { CircuitBreakerService } from '../../src/common/resilience/circuit-breaker';
-import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
+import { CircuitBreaker } from '../../src/common/resilience/circuit-breaker';
+import { SQSClient } from '@aws-sdk/client-sqs';
 import { CreateAppointmentDto } from '../../src/application/dtos/create-appointment.dto';
 
 describe('SQS Producer Performance Tests', () => {
   let producer: EnterpriseAppointmentProducer;
   let module: TestingModule;
   let mockSQSClient: jest.Mocked<SQSClient>;
-  let mockCircuitBreaker: jest.Mocked<CircuitBreakerService>;
+  let mockCircuitBreaker: jest.Mocked<CircuitBreaker>;
 
   beforeAll(async () => {
     mockSQSClient = {
@@ -17,7 +22,7 @@ describe('SQS Producer Performance Tests', () => {
     } as any;
 
     mockCircuitBreaker = {
-      execute: jest.fn().mockImplementation(async (fn) => fn()),
+      execute: jest.fn().mockImplementation((fn: any) => fn()),
     } as any;
 
     module = await Test.createTestingModule({
@@ -28,13 +33,15 @@ describe('SQS Producer Performance Tests', () => {
           useValue: mockSQSClient,
         },
         {
-          provide: CircuitBreakerService,
+          provide: CircuitBreaker,
           useValue: mockCircuitBreaker,
         },
       ],
     }).compile();
 
-    producer = module.get<EnterpriseAppointmentProducer>(EnterpriseAppointmentProducer);
+    producer = module.get<EnterpriseAppointmentProducer>(
+      EnterpriseAppointmentProducer,
+    );
   });
 
   afterAll(async () => {
@@ -57,32 +64,32 @@ describe('SQS Producer Performance Tests', () => {
     it('should send single message within acceptable time (< 100ms)', async () => {
       const message = createMockAppointment(1);
       const startTime = performance.now();
-      
+
       await producer.sendMessage(message);
-      
+
       const endTime = performance.now();
       const duration = endTime - startTime;
-      
+
       expect(duration).toBeLessThan(100);
       expect(mockSQSClient.send).toHaveBeenCalledTimes(1);
     });
 
     it('should handle 100 sequential messages efficiently (< 5s total)', async () => {
       const messageCount = 100;
-      const messages = Array.from({ length: messageCount }, (_, i) => 
-        createMockAppointment(i)
+      const messages = Array.from({ length: messageCount }, (_, i) =>
+        createMockAppointment(i),
       );
-      
+
       const startTime = performance.now();
-      
+
       for (const message of messages) {
         await producer.sendMessage(message);
       }
-      
+
       const endTime = performance.now();
       const totalDuration = endTime - startTime;
       const avgDuration = totalDuration / messageCount;
-      
+
       expect(totalDuration).toBeLessThan(5000);
       expect(avgDuration).toBeLessThan(50);
       expect(mockSQSClient.send).toHaveBeenCalledTimes(messageCount);
@@ -92,18 +99,18 @@ describe('SQS Producer Performance Tests', () => {
   describe('Batch Performance', () => {
     it('should handle batch of 10 messages efficiently', async () => {
       const batchSize = 10;
-      const messages = Array.from({ length: batchSize }, (_, i) => 
-        createMockAppointment(i)
+      const messages = Array.from({ length: batchSize }, (_, i) =>
+        createMockAppointment(i),
       );
-      
+
       const startTime = performance.now();
-      
-      const promises = messages.map(message => producer.sendMessage(message));
+
+      const promises = messages.map((message) => producer.sendMessage(message));
       await Promise.all(promises);
-      
+
       const endTime = performance.now();
       const duration = endTime - startTime;
-      
+
       expect(duration).toBeLessThan(1000);
       expect(mockSQSClient.send).toHaveBeenCalledTimes(batchSize);
     });
@@ -111,47 +118,49 @@ describe('SQS Producer Performance Tests', () => {
     it('should maintain performance under concurrent load', async () => {
       const concurrentBatches = 5;
       const batchSize = 20;
-      
+
       const startTime = performance.now();
-      
+
       const batchPromises = Array.from({ length: concurrentBatches }, () => {
-        const messages = Array.from({ length: batchSize }, (_, i) => 
-          createMockAppointment(i)
+        const messages = Array.from({ length: batchSize }, (_, i) =>
+          createMockAppointment(i),
         );
-        return Promise.all(messages.map(msg => producer.sendMessage(msg)));
+        return Promise.all(messages.map((msg) => producer.sendMessage(msg)));
       });
-      
+
       await Promise.all(batchPromises);
-      
+
       const endTime = performance.now();
       const duration = endTime - startTime;
-      
+
       expect(duration).toBeLessThan(3000);
-      expect(mockSQSClient.send).toHaveBeenCalledTimes(concurrentBatches * batchSize);
+      expect(mockSQSClient.send).toHaveBeenCalledTimes(
+        concurrentBatches * batchSize,
+      );
     });
   });
 
   describe('Memory Usage', () => {
     it('should not cause memory leaks during high-volume operations', async () => {
       const initialMemory = process.memoryUsage();
-      
+
       const messageCount = 1000;
-      const messages = Array.from({ length: messageCount }, (_, i) => 
-        createMockAppointment(i)
+      const messages = Array.from({ length: messageCount }, (_, i) =>
+        createMockAppointment(i),
       );
-      
+
       for (const message of messages) {
         await producer.sendMessage(message);
       }
-      
+
       // Force garbage collection if available
       if (global.gc) {
         global.gc();
       }
-      
+
       const finalMemory = process.memoryUsage();
       const memoryIncrease = finalMemory.heapUsed - initialMemory.heapUsed;
-      
+
       // Memory increase should be reasonable (< 10MB for 1000 messages)
       expect(memoryIncrease).toBeLessThan(10 * 1024 * 1024);
     });
@@ -159,16 +168,20 @@ describe('SQS Producer Performance Tests', () => {
 
   describe('Circuit Breaker Performance', () => {
     it('should handle circuit breaker failures gracefully', async () => {
-      mockCircuitBreaker.execute.mockRejectedValueOnce(new Error('Circuit breaker open'));
-      
+      mockCircuitBreaker.execute.mockRejectedValueOnce(
+        new Error('Circuit breaker open'),
+      );
+
       const message = createMockAppointment(1);
       const startTime = performance.now();
-      
-      await expect(producer.sendMessage(message)).rejects.toThrow('Circuit breaker open');
-      
+
+      await expect(producer.sendMessage(message)).rejects.toThrow(
+        'Circuit breaker open',
+      );
+
       const endTime = performance.now();
       const duration = endTime - startTime;
-      
+
       // Should fail fast when circuit breaker is open
       expect(duration).toBeLessThan(50);
     });
@@ -176,16 +189,18 @@ describe('SQS Producer Performance Tests', () => {
 
   describe('Error Recovery Performance', () => {
     it('should handle SQS errors without significant delay', async () => {
-      mockSQSClient.send.mockRejectedValueOnce(new Error('SQS service unavailable'));
-      
+      mockSQSClient.send.mockRejectedValueOnce(
+        new Error('SQS service unavailable'),
+      );
+
       const message = createMockAppointment(1);
       const startTime = performance.now();
-      
+
       await expect(producer.sendMessage(message)).rejects.toThrow();
-      
+
       const endTime = performance.now();
       const duration = endTime - startTime;
-      
+
       expect(duration).toBeLessThan(200);
     });
   });

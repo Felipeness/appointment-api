@@ -32,13 +32,16 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
     });
   }
 
-  async sendMessage(message: any, options?: {
-    delaySeconds?: number;
-    messageGroupId?: string;
-    deduplicationId?: string;
-    priority?: 'high' | 'normal' | 'low';
-    traceId?: string;
-  }): Promise<void> {
+  async sendMessage(
+    message: any,
+    options?: {
+      delaySeconds?: number;
+      messageGroupId?: string;
+      deduplicationId?: string;
+      priority?: 'high' | 'normal' | 'low';
+      traceId?: string;
+    },
+  ): Promise<void> {
     const enterpriseMessage = this.wrapMessage(message, options);
 
     await this.circuitBreaker.execute(async () => {
@@ -71,7 +74,8 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
               DataType: 'String',
             },
             correlationId: {
-              StringValue: enterpriseMessage.correlationId || enterpriseMessage.id,
+              StringValue:
+                enterpriseMessage.correlationId || enterpriseMessage.id,
               DataType: 'String',
             },
             timestamp: {
@@ -86,7 +90,6 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
           type: enterpriseMessage.type,
           traceId: enterpriseMessage.traceId,
         });
-
       } catch (error) {
         this.logger.error('Failed to send message to SQS', {
           error: error.message,
@@ -98,26 +101,31 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
     });
   }
 
-  async sendBatchMessages(messages: any[], options?: {
-    messageGroupId?: string;
-    priority?: 'high' | 'normal' | 'low';
-    traceId?: string;
-  }): Promise<void> {
+  async sendBatchMessages(
+    messages: any[],
+    options?: {
+      messageGroupId?: string;
+      priority?: 'high' | 'normal' | 'low';
+      traceId?: string;
+    },
+  ): Promise<void> {
     // AWS SQS supports up to 10 messages per batch
     const batches = this.chunkArray(messages, 10);
 
     for (const batch of batches) {
-      const promises = batch.map(message => 
+      const promises = batch.map((message) =>
         this.sendMessage(message, {
           ...options,
           deduplicationId: `${message.appointmentId}-${Date.now()}`,
-        })
+        }),
       );
 
       await Promise.all(promises);
     }
 
-    this.logger.log(`Sent ${messages.length} messages in ${batches.length} batches`);
+    this.logger.log(
+      `Sent ${messages.length} messages in ${batches.length} batches`,
+    );
   }
 
   // Legacy interface methods for backward compatibility

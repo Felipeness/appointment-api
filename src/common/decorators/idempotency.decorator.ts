@@ -21,14 +21,15 @@ export const Idempotent = (options: IdempotencyOptions = {}) => {
     SetMetadata(IDEMPOTENCY_KEY, defaultOptions),
     ApiHeader({
       name: 'Idempotency-Key',
-      description: 'Unique key to ensure idempotent request processing. Use UUIDs or similar unique identifiers.',
+      description:
+        'Unique key to ensure idempotent request processing. Use UUIDs or similar unique identifiers.',
       required: false,
       example: '550e8400-e29b-41d4-a716-446655440000',
       schema: {
         type: 'string',
         maxLength: 255,
-        pattern: '^[a-zA-Z0-9_-]+$'
-      }
-    })
+        pattern: '^[a-zA-Z0-9_-]+$',
+      },
+    }),
   );
 };

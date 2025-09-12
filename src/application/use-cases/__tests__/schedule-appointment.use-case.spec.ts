@@ -1,9 +1,7 @@
+/* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { EnterpriseScheduleAppointmentUseCase } from '../enterprise-schedule-appointment.use-case';
-import {
-  SchedulingRuleException,
-  PsychologistNotFoundException,
-} from '../../../common/exceptions/domain.exceptions';
 import type { PsychologistRepository } from '../../../domain/repositories/psychologist.repository';
 import { EnterpriseAppointmentProducer } from '../../../infrastructure/messaging/enterprise-appointment.producer';
 import { CreateAppointmentDto } from '../../dtos/create-appointment.dto';
@@ -49,8 +47,12 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       ],
     }).compile();
 
-    useCase = module.get<EnterpriseScheduleAppointmentUseCase>(EnterpriseScheduleAppointmentUseCase);
-    psychologistRepository = module.get(INJECTION_TOKENS.PSYCHOLOGIST_REPOSITORY);
+    useCase = module.get<EnterpriseScheduleAppointmentUseCase>(
+      EnterpriseScheduleAppointmentUseCase,
+    );
+    psychologistRepository = module.get(
+      INJECTION_TOKENS.PSYCHOLOGIST_REPOSITORY,
+    );
     enterpriseProducer = module.get('ENTERPRISE_MESSAGE_QUEUE');
   });
 
@@ -64,7 +66,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
     if (dayDiff !== 0) {
       monday.setDate(monday.getDate() + dayDiff + (dayDiff < 0 ? 7 : 0));
     }
-    
+
     return {
       patientEmail: 'patient@test.com',
       patientName: 'John Doe',
@@ -77,7 +79,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
     it('should queue appointment successfully with valid data', async () => {
       const dto = createValidDto();
       const mockPsychologist = { id: 'psychologist-id', isActive: true };
-      
+
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
 
@@ -88,7 +90,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       expect(result.traceId).toBeDefined();
       expect(result.priority).toBeDefined();
       expect(result.estimatedProcessingTime).toBeDefined();
-      
+
       expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           appointmentId: result.appointmentId,
@@ -102,19 +104,21 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
           traceId: expect.any(String),
           messageGroupId: expect.any(String),
           deduplicationId: expect.any(String),
-        })
+        }),
       );
-      
+
       // Verify fast validation
-      expect(psychologistRepository.findById).toHaveBeenCalledWith(dto.psychologistId);
+      expect(psychologistRepository.findById).toHaveBeenCalledWith(
+        dto.psychologistId,
+      );
     });
 
     it('should return failed status when appointment is within 24 hours', async () => {
       const dto = createValidDto();
       dto.scheduledAt = addHours(new Date(), 12).toISOString(); // 12 hours from now
-      
+
       const result = await useCase.execute(dto);
-      
+
       expect(result.status).toBe('failed');
       expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
     });
@@ -122,9 +126,9 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
     it('should return failed status when psychologist not found', async () => {
       const dto = createValidDto();
       psychologistRepository.findById.mockResolvedValue(null);
-      
+
       const result = await useCase.execute(dto);
-      
+
       expect(result.status).toBe('failed');
       expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
     });
@@ -133,9 +137,9 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const dto = createValidDto();
       const mockPsychologist = { id: 'psychologist-id', isActive: false };
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
-      
+
       const result = await useCase.execute(dto);
-      
+
       expect(result.status).toBe('failed');
       expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
     });
@@ -146,7 +150,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
         appointmentType: 'EMERGENCY',
       };
       const mockPsychologist = { id: 'psychologist-id', isActive: true };
-      
+
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
 
@@ -158,7 +162,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
         expect.objectContaining({
           priority: 'high',
           delaySeconds: 0,
-        })
+        }),
       );
     });
 
@@ -167,29 +171,29 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
         ...createValidDto(),
         duration: 90,
         notes: 'Special requirements',
-        consultationFee: 150.00,
+        consultationFee: 150.0,
       };
       const mockPsychologist = { id: 'psychologist-id', isActive: true };
-      
+
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
 
-      const result = await useCase.execute(dto);
+      await useCase.execute(dto);
 
       expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           duration: 90,
           notes: 'Special requirements',
-          consultationFee: 150.00,
+          consultationFee: 150.0,
         }),
-        expect.anything()
+        expect.anything(),
       );
     });
 
     it('should generate unique appointment IDs and trace IDs', async () => {
       const dto = createValidDto();
       const mockPsychologist = { id: 'psychologist-id', isActive: true };
-      
+
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
 
@@ -205,7 +209,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const dto = createValidDto();
       const mockPsychologist = { id: 'psychologist-id', isActive: true };
       const customTraceId = 'custom-trace-123';
-      
+
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
 
@@ -222,7 +226,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
         expect.objectContaining({
           priority: 'high',
           traceId: customTraceId,
-        })
+        }),
       );
     });
   });

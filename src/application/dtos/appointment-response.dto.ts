@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { AppointmentStatus, AppointmentType, MeetingType } from '../../domain/entities/enums';
+import {
+  AppointmentStatus,
+  AppointmentType,
+  MeetingType,
+} from '../../domain/entities/enums';
 
 export class AppointmentResponseDto {
   @ApiProperty({
@@ -90,7 +94,7 @@ export class AppointmentResponseDto {
 
   @ApiProperty({
     description: 'Consultation fee',
-    example: 150.00,
+    example: 150.0,
     required: false,
   })
   consultationFee?: number;

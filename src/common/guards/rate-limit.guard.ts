@@ -1,7 +1,20 @@
-import { Injectable, CanActivate, ExecutionContext, HttpException, HttpStatus, Logger } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { RateLimiterMemory, RateLimiterRedis, IRateLimiterOptions, RateLimiterRes } from 'rate-limiter-flexible';
+import {
+  RateLimiterMemory,
+  RateLimiterRedis,
+  IRateLimiterOptions,
+  RateLimiterRes,
+} from 'rate-limiter-flexible';
 
 export interface RateLimitOptions {
   points: number; // Number of requests
@@ -24,8 +37,11 @@ export const RateLimit = (options: RateLimitOptions) => {
 @Injectable()
 export class RateLimitGuard implements CanActivate {
   private readonly logger = new Logger(RateLimitGuard.name);
-  private readonly rateLimiters = new Map<string, RateLimiterMemory | RateLimiterRedis>();
-  
+  private readonly rateLimiters = new Map<
+    string,
+    RateLimiterMemory | RateLimiterRedis
+  >();
+
   constructor(
     private readonly reflector: Reflector,
     // @Inject('REDIS_CLIENT') private readonly redis?: Redis, // Uncomment when Redis is available
@@ -43,7 +59,7 @@ export class RateLimitGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<Request>();
     const key = this.generateKey(request, rateLimitOptions.keyPrefix);
-    
+
     const rateLimiter = this.getRateLimiter(rateLimitOptions);
 
     try {
@@ -52,12 +68,18 @@ export class RateLimitGuard implements CanActivate {
     } catch (rejRes) {
       if (rejRes instanceof RateLimiterRes) {
         const response = context.switchToHttp().getResponse();
-        
+
         // Add rate limit headers
         response.setHeader('X-RateLimit-Limit', rateLimitOptions.points);
         response.setHeader('X-RateLimit-Remaining', rejRes.remainingPoints);
-        response.setHeader('X-RateLimit-Reset', Math.round(rejRes.msBeforeNext / 1000));
-        response.setHeader('Retry-After', Math.round(rejRes.msBeforeNext / 1000));
+        response.setHeader(
+          'X-RateLimit-Reset',
+          Math.round(rejRes.msBeforeNext / 1000),
+        );
+        response.setHeader(
+          'Retry-After',
+          Math.round(rejRes.msBeforeNext / 1000),
+        );
 
         this.logger.warn(`Rate limit exceeded for key: ${key}`, {
           ip: this.getClientIP(request),
@@ -83,9 +105,11 @@ export class RateLimitGuard implements CanActivate {
     }
   }
 
-  private getRateLimiter(options: RateLimitOptions): RateLimiterMemory | RateLimiterRedis {
+  private getRateLimiter(
+    options: RateLimitOptions,
+  ): RateLimiterMemory | RateLimiterRedis {
     const keyId = JSON.stringify(options);
-    
+
     if (!this.rateLimiters.has(keyId)) {
       const rateLimiterOptions: IRateLimiterOptions = {
         points: options.points,
@@ -116,11 +140,11 @@ export class RateLimitGuard implements CanActivate {
     const endpoint = request.path;
 
     const parts = [keyPrefix || 'rate-limit', ip];
-    
+
     if (userId) {
       parts.push('user', userId);
     }
-    
+
     parts.push('endpoint', endpoint.replace(/[^a-zA-Z0-9]/g, '_'));
 
     return parts.join(':');
@@ -128,8 +152,8 @@ export class RateLimitGuard implements CanActivate {
 
   private getClientIP(request: Request): string {
     return (
-      request.headers['x-forwarded-for'] as string ||
-      request.headers['x-real-ip'] as string ||
+      (request.headers['x-forwarded-for'] as string) ||
+      (request.headers['x-real-ip'] as string) ||
       request.connection.remoteAddress ||
       request.ip ||
       'unknown'

@@ -19,7 +19,7 @@ export class Psychologist {
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date(),
     public readonly createdBy?: string,
-    public readonly lastLoginAt?: Date
+    public readonly lastLoginAt?: Date,
   ) {
     this.validate();
   }
@@ -70,7 +70,7 @@ export class Psychologist {
       this.createdAt,
       new Date(),
       this.createdBy,
-      this.lastLoginAt
+      this.lastLoginAt,
     );
   }
 
@@ -93,7 +93,7 @@ export class Psychologist {
       this.createdAt,
       new Date(),
       this.createdBy,
-      this.lastLoginAt
+      this.lastLoginAt,
     );
   }
 
@@ -116,7 +116,7 @@ export class Psychologist {
       this.createdAt,
       new Date(),
       this.createdBy,
-      this.lastLoginAt
+      this.lastLoginAt,
     );
   }
 
@@ -124,7 +124,7 @@ export class Psychologist {
     name?: string,
     phone?: string,
     biography?: string,
-    profileImageUrl?: string
+    profileImageUrl?: string,
   ): Psychologist {
     return new Psychologist(
       this.id,
@@ -144,7 +144,7 @@ export class Psychologist {
       this.createdAt,
       new Date(),
       this.createdBy,
-      new Date() // lastLoginAt
+      new Date(), // lastLoginAt
     );
   }
 }

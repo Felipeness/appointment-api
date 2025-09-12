@@ -51,9 +51,7 @@ export class PrismaPsychologistRepository implements PsychologistRepository {
   }
 
   private toDomain(psychologist: any): Psychologist {
-    const workingHours = new WorkingHours(
-      psychologist.workingHours || '{}'
-    );
+    const workingHours = new WorkingHours(psychologist.workingHours || '{}');
 
     return new Psychologist(
       psychologist.id,
@@ -73,7 +71,7 @@ export class PrismaPsychologistRepository implements PsychologistRepository {
       psychologist.createdAt,
       psychologist.updatedAt,
       psychologist.createdBy,
-      psychologist.lastLoginAt
+      psychologist.lastLoginAt,
     );
   }
 

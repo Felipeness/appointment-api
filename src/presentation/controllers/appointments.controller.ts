@@ -1,11 +1,33 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Logger, Headers, Query, UseInterceptors, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiHeader, ApiQuery } from '@nestjs/swagger';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Logger,
+  Headers,
+  Query,
+  UseInterceptors,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiHeader,
+  ApiQuery,
+} from '@nestjs/swagger';
 
 import { EnterpriseScheduleAppointmentUseCase } from '../../application/use-cases/enterprise-schedule-appointment.use-case';
 import { CreateAppointmentDto } from '../../application/dtos/create-appointment.dto';
 import { Idempotent } from '../../common/decorators/idempotency.decorator';
 import { IdempotencyInterceptor } from '../../common/interceptors/idempotency.interceptor';
-import { RateLimit, RateLimitGuard } from '../../common/guards/rate-limit.guard';
+import {
+  RateLimit,
+  RateLimitGuard,
+} from '../../common/guards/rate-limit.guard';
 
 @ApiTags('appointments')
 @Controller('appointments')
@@ -24,7 +46,8 @@ export class AppointmentsController {
   @RateLimit({ points: 10, duration: 60, blockDuration: 300 }) // 10 requests per minute, block for 5 minutes
   @ApiOperation({
     summary: 'Schedule a new appointment (Enterprise)',
-    description: 'Creates a new appointment request with enterprise features including priority processing, distributed tracing, and intelligent queueing. The appointment will be validated and confirmed/declined asynchronously.',
+    description:
+      'Creates a new appointment request with enterprise features including priority processing, distributed tracing, and intelligent queueing. The appointment will be validated and confirmed/declined asynchronously.',
   })
   @ApiBody({
     description: 'Appointment details',
@@ -42,13 +65,15 @@ export class AppointmentsController {
   })
   @ApiQuery({
     name: 'priority',
-    description: 'Message priority: high (immediate), normal (5s delay), low (10s delay)',
+    description:
+      'Message priority: high (immediate), normal (5s delay), low (10s delay)',
     required: false,
     enum: ['high', 'normal', 'low'],
   })
   @ApiResponse({
     status: HttpStatus.ACCEPTED,
-    description: 'Appointment request accepted and queued for enterprise processing',
+    description:
+      'Appointment request accepted and queued for enterprise processing',
     schema: {
       type: 'object',
       properties: {
@@ -97,9 +122,10 @@ export class AppointmentsController {
       type: 'object',
       properties: {
         statusCode: { type: 'number', example: 400 },
-        message: { 
-          type: 'string', 
-          example: 'Appointments must be scheduled at least 24 hours in advance' 
+        message: {
+          type: 'string',
+          example:
+            'Appointments must be scheduled at least 24 hours in advance',
         },
         error: { type: 'string', example: 'Bad Request' },
       },
@@ -133,7 +159,7 @@ export class AppointmentsController {
       traceId,
       userId,
     });
-    
+
     try {
       const result = await this.enterpriseScheduleUseCase.execute(
         createAppointmentDto,
@@ -141,11 +167,11 @@ export class AppointmentsController {
           priority,
           traceId,
           userId,
-        }
+        },
       );
-      
+
       const processingTime = Date.now() - startTime;
-      
+
       this.logger.log(`Enterprise appointment request processed successfully`, {
         appointmentId: result.appointmentId,
         status: result.status,
@@ -156,14 +182,14 @@ export class AppointmentsController {
 
       return {
         ...result,
-        message: result.status === 'queued' 
-          ? 'Appointment request queued for enterprise processing'
-          : 'Appointment request failed validation',
+        message:
+          result.status === 'queued'
+            ? 'Appointment request queued for enterprise processing'
+            : 'Appointment request failed validation',
       };
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      
+
       this.logger.error(`Enterprise appointment request failed`, {
         psychologistId: createAppointmentDto.psychologistId,
         error: error.message,
@@ -185,7 +211,8 @@ export class AppointmentsController {
   @RateLimit({ points: 5, duration: 300, blockDuration: 600 }) // 5 batch requests per 5 minutes, block for 10 minutes
   @ApiOperation({
     summary: 'Schedule multiple appointments (Enterprise Batch)',
-    description: 'Creates multiple appointment requests in a single batch operation with enterprise features. Optimized for high-volume scenarios.',
+    description:
+      'Creates multiple appointment requests in a single batch operation with enterprise features. Optimized for high-volume scenarios.',
   })
   @ApiBody({
     description: 'Array of appointment details',
@@ -256,12 +283,12 @@ export class AppointmentsController {
           priority,
           traceId,
           batchId,
-        }
+        },
       );
 
       const processingTime = Date.now() - startTime;
-      const successful = results.filter(r => r.status === 'queued').length;
-      const failed = results.filter(r => r.status === 'failed').length;
+      const successful = results.filter((r) => r.status === 'queued').length;
+      const failed = results.filter((r) => r.status === 'failed').length;
 
       this.logger.log(`Enterprise batch appointment request processed`, {
         batchId,
@@ -279,10 +306,9 @@ export class AppointmentsController {
         results,
         message: `Batch processed: ${successful} queued, ${failed} failed`,
       };
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      
+
       this.logger.error(`Enterprise batch appointment request failed`, {
         batchId,
         error: error.message,

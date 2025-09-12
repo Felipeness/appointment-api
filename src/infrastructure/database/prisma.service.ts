@@ -11,7 +11,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       this.logger.log('Database connected successfully');
     } catch (error) {
       this.logger.error('Failed to connect to database', error.message);
-      this.logger.warn('Application will run in MOCK MODE for testing purposes');
+      this.logger.warn(
+        'Application will run in MOCK MODE for testing purposes',
+      );
       // Don't throw error - allow application to continue for testing
     }
   }

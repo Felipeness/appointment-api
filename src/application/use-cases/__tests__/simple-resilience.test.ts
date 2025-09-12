@@ -1,6 +1,12 @@
+/* eslint-disable @typescript-eslint/require-await */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { SagaOrchestrator } from '../../../common/saga/saga-orchestrator';
 import { DeadLetterQueueHandler } from '../../../common/resilience/dlq-handler';
-import { CircuitBreaker, CircuitBreakerState } from '../../../common/resilience/circuit-breaker';
+import {
+  CircuitBreaker,
+  CircuitBreakerState,
+} from '../../../common/resilience/circuit-breaker';
 
 describe('Simple Resilience Tests', () => {
   let sagaOrchestrator: SagaOrchestrator;
@@ -20,7 +26,7 @@ describe('Simple Resilience Tests', () => {
   describe('Saga Pattern', () => {
     it('should execute saga steps in order', async () => {
       const executionOrder: string[] = [];
-      
+
       const steps = [
         {
           id: 'step1',
@@ -54,7 +60,7 @@ describe('Simple Resilience Tests', () => {
 
     it('should compensate steps when failure occurs', async () => {
       const executionOrder: string[] = [];
-      
+
       const steps = [
         {
           id: 'step1',
@@ -80,7 +86,10 @@ describe('Simple Resilience Tests', () => {
         },
       ];
 
-      const execution = await sagaOrchestrator.executeSaga('FailingSaga', steps);
+      const execution = await sagaOrchestrator.executeSaga(
+        'FailingSaga',
+        steps,
+      );
 
       expect(execution.status).toBe('COMPENSATED');
       expect(executionOrder).toEqual(['action1', 'action2', 'compensation1']);
@@ -95,11 +104,15 @@ describe('Simple Resilience Tests', () => {
 
       expect(result).toBe('success');
       expect(operation).toHaveBeenCalledTimes(1);
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.CLOSED);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.CLOSED,
+      );
     });
 
     it('should open after failure threshold', async () => {
-      const failingOperation = jest.fn().mockRejectedValue(new Error('Database error'));
+      const failingOperation = jest
+        .fn()
+        .mockRejectedValue(new Error('Database error'));
 
       // Trigger enough failures to open the circuit
       for (let i = 0; i < 3; i++) {
@@ -110,7 +123,9 @@ describe('Simple Resilience Tests', () => {
         }
       }
 
-      expect(circuitBreaker.getHealthStatus().state).toBe(CircuitBreakerState.OPEN);
+      expect(circuitBreaker.getHealthStatus().state).toBe(
+        CircuitBreakerState.OPEN,
+      );
     });
 
     it('should fail fast when open', async () => {
@@ -120,7 +135,9 @@ describe('Simple Resilience Tests', () => {
       circuitBreaker.forceOpen();
 
       // Should fail fast without calling operation
-      await expect(circuitBreaker.execute(operation)).rejects.toThrow('Circuit breaker');
+      await expect(circuitBreaker.execute(operation)).rejects.toThrow(
+        'Circuit breaker',
+      );
       expect(operation).not.toHaveBeenCalled();
     });
   });
@@ -132,7 +149,7 @@ describe('Simple Resilience Tests', () => {
 
       // Should not throw - DLQ handler processes failures gracefully
       await dlqHandler.handleFailedMessage(testMessage, error, 1, 'test-queue');
-      
+
       // Verify the handler configuration
       const healthStatus = dlqHandler.getHealthStatus();
       expect(healthStatus.config.maxRetries).toBe(2);
@@ -193,20 +210,19 @@ describe('Simple Resilience Tests', () => {
 
         const sagaExecution = await sagaOrchestrator.executeSaga(
           'BookingWorkflow',
-          sagaSteps
+          sagaSteps,
         );
 
         if (sagaExecution.status === 'COMPLETED') {
           processedSuccessfully = true;
         }
-
       } catch (error) {
         // Step 3: DLQ handles failures
         await dlqHandler.handleFailedMessage(
           { workflowId: 'booking-123' },
           error instanceof Error ? error : new Error('Unknown error'),
           1,
-          'booking-queue'
+          'booking-queue',
         );
       }
 

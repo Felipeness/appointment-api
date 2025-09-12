@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { AppointmentRepository } from '../../../domain/repositories/appointment.repository';
 import { Appointment } from '../../../domain/entities/appointment.entity';
-import { AppointmentStatus, AppointmentType, MeetingType } from '../../../domain/entities/enums';
+import {
+  AppointmentStatus,
+  AppointmentType,
+  MeetingType,
+} from '../../../domain/entities/enums';
 import { PrismaService } from '../prisma.service';
-import { AppointmentStatus as PrismaAppointmentStatus, AppointmentType as PrismaAppointmentType, MeetingType as PrismaMeetingType } from '@prisma/client';
+import {
+  AppointmentStatus as PrismaAppointmentStatus,
+  AppointmentType as PrismaAppointmentType,
+  MeetingType as PrismaMeetingType,
+} from '@prisma/client';
 
 @Injectable()
 export class PrismaAppointmentRepository implements AppointmentRepository {
@@ -19,7 +27,7 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
 
   async findByPsychologistAndDate(
     psychologistId: string,
-    scheduledAt: Date
+    scheduledAt: Date,
   ): Promise<Appointment | null> {
     const appointment = await this.prisma.appointment.findUnique({
       where: {
@@ -60,7 +68,10 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
     return appointments.map(this.toDomain);
   }
 
-  async findByDateRange(startDate: Date, endDate: Date): Promise<Appointment[]> {
+  async findByDateRange(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Appointment[]> {
     const appointments = await this.prisma.appointment.findMany({
       where: {
         scheduledAt: {
@@ -118,7 +129,7 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
       appointment.createdAt,
       appointment.updatedAt,
       appointment.confirmedAt,
-      appointment.completedAt
+      appointment.completedAt,
     );
   }
 

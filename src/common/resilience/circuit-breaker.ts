@@ -1,16 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 export enum CircuitBreakerState {
-  CLOSED = 'CLOSED',     // Normal operation
-  OPEN = 'OPEN',         // Failing fast
-  HALF_OPEN = 'HALF_OPEN' // Testing if service recovered
+  CLOSED = 'CLOSED', // Normal operation
+  OPEN = 'OPEN', // Failing fast
+  HALF_OPEN = 'HALF_OPEN', // Testing if service recovered
 }
 
 export interface CircuitBreakerConfig {
-  failureThreshold: number;    // Number of failures before opening
-  recoveryTimeout: number;     // Time in ms to wait before trying again
-  monitoringPeriod: number;    // Time window in ms for failure counting
-  successThreshold: number;    // Successes needed in HALF_OPEN to close
+  failureThreshold: number; // Number of failures before opening
+  recoveryTimeout: number; // Time in ms to wait before trying again
+  monitoringPeriod: number; // Time window in ms for failure counting
+  successThreshold: number; // Successes needed in HALF_OPEN to close
 }
 
 export interface CircuitBreakerMetrics {
@@ -34,13 +34,16 @@ export class CircuitBreaker {
   private nextAttemptTime?: Date;
 
   private readonly config: CircuitBreakerConfig = {
-    failureThreshold: 5,        // Open after 5 failures
-    recoveryTimeout: 30000,     // Wait 30 seconds before retry
-    monitoringPeriod: 60000,    // 1 minute window
-    successThreshold: 3,        // Need 3 successes to close
+    failureThreshold: 5, // Open after 5 failures
+    recoveryTimeout: 30000, // Wait 30 seconds before retry
+    monitoringPeriod: 60000, // 1 minute window
+    successThreshold: 3, // Need 3 successes to close
   };
 
-  constructor(private readonly name: string, config?: Partial<CircuitBreakerConfig>) {
+  constructor(
+    private readonly name: string,
+    config?: Partial<CircuitBreakerConfig>,
+  ) {
     if (config) {
       this.config = { ...this.config, ...config };
     }
@@ -49,7 +52,9 @@ export class CircuitBreaker {
   async execute<T>(operation: () => Promise<T>): Promise<T> {
     // Check if circuit breaker should allow the request
     if (!this.canExecute()) {
-      const error = new Error(`Circuit breaker ${this.name} is OPEN - failing fast`);
+      const error = new Error(
+        `Circuit breaker ${this.name} is OPEN - failing fast`,
+      );
       this.logger.warn(`Circuit breaker ${this.name} blocked request`);
       throw error;
     }
@@ -76,7 +81,9 @@ export class CircuitBreaker {
         if (this.nextAttemptTime && now >= this.nextAttemptTime) {
           this.state = CircuitBreakerState.HALF_OPEN;
           this.successCount = 0; // Reset success count for HALF_OPEN
-          this.logger.log(`Circuit breaker ${this.name} transitioning to HALF_OPEN`);
+          this.logger.log(
+            `Circuit breaker ${this.name} transitioning to HALF_OPEN`,
+          );
           return true;
         }
         return false;
@@ -92,7 +99,7 @@ export class CircuitBreaker {
   private onSuccess(): void {
     this.lastSuccessTime = new Date();
     this.successCount++;
-    
+
     if (this.state === CircuitBreakerState.HALF_OPEN) {
       if (this.successCount >= this.config.successThreshold) {
         this.close();
@@ -122,7 +129,7 @@ export class CircuitBreaker {
     this.state = CircuitBreakerState.OPEN;
     this.nextAttemptTime = new Date(Date.now() + this.config.recoveryTimeout);
     this.logger.error(
-      `Circuit breaker ${this.name} OPENED - failing fast for ${this.config.recoveryTimeout}ms`
+      `Circuit breaker ${this.name} OPENED - failing fast for ${this.config.recoveryTimeout}ms`,
     );
   }
 
@@ -131,15 +138,18 @@ export class CircuitBreaker {
     this.resetFailureCount();
     this.successCount = 0;
     this.nextAttemptTime = undefined;
-    this.logger.log(`Circuit breaker ${this.name} CLOSED - normal operation resumed`);
+    this.logger.log(
+      `Circuit breaker ${this.name} CLOSED - normal operation resumed`,
+    );
   }
 
   private resetFailureCount(): void {
     // Only reset failures that are older than monitoring period
     const now = new Date();
     if (
-      !this.lastFailureTime || 
-      (now.getTime() - this.lastFailureTime.getTime()) > this.config.monitoringPeriod
+      !this.lastFailureTime ||
+      now.getTime() - this.lastFailureTime.getTime() >
+        this.config.monitoringPeriod
     ) {
       this.failureCount = 0;
     }
@@ -175,8 +185,10 @@ export class CircuitBreaker {
     failureRate: number;
     nextAttemptTime?: Date;
   } {
-    const failureRate = this.totalRequests > 0 ? 
-      (this.failureCount / this.totalRequests) * 100 : 0;
+    const failureRate =
+      this.totalRequests > 0
+        ? (this.failureCount / this.totalRequests) * 100
+        : 0;
 
     return {
       isHealthy: this.state === CircuitBreakerState.CLOSED,
