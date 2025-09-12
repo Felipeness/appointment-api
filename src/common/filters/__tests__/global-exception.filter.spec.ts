@@ -1,6 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ArgumentsHost } from '@nestjs/common';
 import { GlobalExceptionFilter } from '../global-exception.filter';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
@@ -27,7 +28,7 @@ describe('GlobalExceptionFilter', () => {
       getRequest: () => mockRequest,
       getResponse: () => mockResponse,
     }),
-  };
+  } as ArgumentsHost;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -48,7 +49,7 @@ describe('GlobalExceptionFilter', () => {
     it('should handle HttpException correctly', () => {
       const exception = new HttpException('Test error', HttpStatus.BAD_REQUEST);
 
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
       expect(mockResponse.json).toHaveBeenCalledWith(
@@ -74,7 +75,7 @@ describe('GlobalExceptionFilter', () => {
         HttpStatus.BAD_REQUEST,
       );
 
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -96,7 +97,7 @@ describe('GlobalExceptionFilter', () => {
         },
       );
 
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
       expect(mockResponse.json).toHaveBeenCalledWith(
@@ -118,7 +119,7 @@ describe('GlobalExceptionFilter', () => {
         meta: {},
       });
 
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
       expect(mockResponse.json).toHaveBeenCalledWith(
@@ -138,7 +139,7 @@ describe('GlobalExceptionFilter', () => {
 
       const exception = new Error('Generic error message');
 
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -164,7 +165,7 @@ describe('GlobalExceptionFilter', () => {
 
       const exception = new Error('Generic error message');
 
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -183,7 +184,7 @@ describe('GlobalExceptionFilter', () => {
       mockRequest.headers['x-correlation-id'] = correlationId;
 
       const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,7 +197,7 @@ describe('GlobalExceptionFilter', () => {
       delete mockRequest.headers['x-correlation-id'];
 
       const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
-      filter.catch(exception, mockArgumentsHost as any);
+      filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -1,15 +1,15 @@
 export interface SagaStep {
   id: string;
   name: string;
-  action: () => Promise<any>;
-  compensation: () => Promise<any>;
+  action: () => Promise<unknown>;
+  compensation: () => Promise<unknown>;
   retryable?: boolean;
   maxRetries?: number;
 }
 
 export interface SagaContext {
   sagaId: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   completedSteps: string[];
   currentStep?: string;
   error?: Error;

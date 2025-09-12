@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import {
   IdempotencyService,
   IdempotencyRecord,
@@ -8,9 +8,9 @@ import { createHash } from 'crypto';
 @Injectable()
 export class RedisIdempotencyService implements IdempotencyService {
   private readonly logger = new Logger(RedisIdempotencyService.name);
-  private readonly cache = new Map<string, IdempotencyRecord>(); // In-memory fallback
+  private readonly cache = new Map<string, IdempotencyRecord>(); // In-memory implementation
 
-  constructor() {} // @Inject('REDIS_CLIENT') private readonly redis: Redis, // Uncomment when Redis is available
+  constructor() {}
 
   async store(record: IdempotencyRecord): Promise<void> {
     const cacheKey = this.buildCacheKey(
@@ -19,28 +19,14 @@ export class RedisIdempotencyService implements IdempotencyService {
       record.endpoint,
     );
 
-    try {
-      // TODO: Use Redis when available
-      // await this.redis.setex(cacheKey, Math.floor((record.expiresAt.getTime() - Date.now()) / 1000), JSON.stringify(record));
-
-      // Fallback to in-memory cache
-      this.cache.set(cacheKey, record);
-
-      this.logger.debug(`Stored idempotency record`, {
-        key: record.key,
-        endpoint: record.endpoint,
-        cacheKey,
-      });
-
-      // Satisfy ESLint require-await rule while maintaining async interface
-      await Promise.resolve();
-    } catch (error) {
-      this.logger.error(`Failed to store idempotency record`, {
-        key: record.key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
+    // Simple in-memory storage
+    this.cache.set(cacheKey, record);
+    
+    this.logger.debug(`Stored idempotency record`, {
+      key: record.key,
+      endpoint: record.endpoint,
+      cacheKey,
+    });
   }
 
   async get(
@@ -49,38 +35,18 @@ export class RedisIdempotencyService implements IdempotencyService {
     endpoint?: string,
   ): Promise<IdempotencyRecord | null> {
     const cacheKey = this.buildCacheKey(key, userId, endpoint);
-
-    try {
-      // TODO: Use Redis when available
-      // const data = await this.redis.get(cacheKey);
-      // if (data) {
-      //   const record = JSON.parse(data) as IdempotencyRecord;
-      //   record.createdAt = new Date(record.createdAt);
-      //   record.expiresAt = new Date(record.expiresAt);
-      //   return record;
-      // }
-
-      // Fallback to in-memory cache
-      const record = this.cache.get(cacheKey);
-      if (record) {
-        // Check expiration
-        if (record.expiresAt.getTime() < Date.now()) {
-          this.cache.delete(cacheKey);
-          return null;
-        }
-        return record;
+    const record = this.cache.get(cacheKey);
+    
+    if (record) {
+      // Check expiration
+      if (record.expiresAt.getTime() < Date.now()) {
+        this.cache.delete(cacheKey);
+        return null;
       }
-
-      // Satisfy ESLint require-await rule while maintaining async interface
-      await Promise.resolve();
-      return null;
-    } catch (error) {
-      this.logger.error(`Failed to get idempotency record`, {
-        key,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
+      return record;
     }
+
+    return null;
   }
 
   async exists(

@@ -5,13 +5,13 @@ import { AppointmentType, MeetingType } from '../../domain/entities/enums';
 const sanitizeString = (str: string) => str.trim().replace(/[<>]/g, '');
 const sanitizeEmail = (email: string) => email.toLowerCase().trim();
 const sanitizePhone = (phone: string) =>
-  phone.replace(/[^\d+\-\(\)\s]/g, '').trim();
+  phone.replace(/[^\d+\-()\s]/g, '').trim();
 
 // Email validation regex (more comprehensive)
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
 // Phone validation regex (international formats)
-const phoneRegex = /^[\+]?[\d\s\-\(\)]{8,20}$/;
+const phoneRegex = /^[+]?[\d\s\-()]{8,20}$/;
 
 // URL validation for meeting URLs
 const urlRegex = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
@@ -44,7 +44,7 @@ export const CreateAppointmentSchema = z
       .refine((name) => !/^\s*$/.test(name), {
         message: 'Patient name cannot be only whitespace',
       })
-      .refine((name) => /^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-\.']+$/.test(name), {
+      .refine((name) => /^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-.']+$/.test(name), {
         message: 'Patient name contains invalid characters',
       }),
 
@@ -197,7 +197,7 @@ export type CreateAppointmentInput = z.infer<typeof CreateAppointmentSchema>;
 // Helper function to create a validation pipe for this schema
 export const createAppointmentValidationPipe = () =>
   new (class {
-    transform(value: any) {
+    transform(value: unknown) {
       try {
         return CreateAppointmentSchema.parse(value);
       } catch (error) {

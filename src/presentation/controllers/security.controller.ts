@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */
 import {
   Controller,
   Get,
@@ -69,8 +68,9 @@ export class SecurityController {
       },
     },
   })
+  // eslint-disable-next-line @typescript-eslint/require-await
   async getSecurityStatus() {
-    const stats = this.ddosProtection?.getStats() || {
+    const stats = this.ddosProtection?.getStats() ?? {
       suspiciousIPs: 0,
       attackingIPs: 0,
       warningIPs: 0,
@@ -126,6 +126,7 @@ export class SecurityController {
       },
     },
   })
+  // eslint-disable-next-line @typescript-eslint/require-await
   async addToWhitelist(@Body() body: { ip: string; reason?: string }) {
     if (!this.isValidIP(body.ip)) {
       return {
@@ -139,7 +140,7 @@ export class SecurityController {
     return {
       message: 'IP address added to whitelist successfully',
       ip: body.ip,
-      reason: body.reason || 'Manual addition',
+      reason: body.reason ?? 'Manual addition',
       addedAt: new Date().toISOString(),
     };
   }
@@ -164,6 +165,7 @@ export class SecurityController {
       },
     },
   })
+  // eslint-disable-next-line @typescript-eslint/require-await
   async addToBlacklist(@Body() body: { ip: string; reason?: string }) {
     if (!this.isValidIP(body.ip)) {
       return {
@@ -177,7 +179,7 @@ export class SecurityController {
     return {
       message: 'IP address added to blacklist successfully',
       ip: body.ip,
-      reason: body.reason || 'Manual addition',
+      reason: body.reason ?? 'Manual addition',
       addedAt: new Date().toISOString(),
     };
   }
@@ -202,6 +204,7 @@ export class SecurityController {
       },
     },
   })
+  // eslint-disable-next-line @typescript-eslint/require-await
   async clearIPRestrictions(@Body() body: { ip: string }) {
     if (!this.isValidIP(body.ip)) {
       return {
@@ -246,6 +249,7 @@ export class SecurityController {
       },
     },
   })
+  // eslint-disable-next-line @typescript-eslint/require-await
   async getHealthStatus() {
     return {
       status: 'healthy',

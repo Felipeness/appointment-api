@@ -46,15 +46,19 @@ export function validateEnv(): EnvConfig {
     if (error instanceof z.ZodError) {
       const missingFields = error.issues
         .filter(
-          (e) =>
-            e.code === 'invalid_type' && (e as any).received === 'undefined',
+          (e): e is z.ZodIssue & { received: unknown } =>
+            e.code === 'invalid_type' &&
+            'received' in e &&
+            (e as { received: unknown }).received === 'undefined',
         )
         .map((e) => e.path.join('.'));
 
       const invalidFields = error.issues
         .filter(
-          (e) =>
-            e.code !== 'invalid_type' || (e as any).received !== 'undefined',
+          (e): e is z.ZodIssue & { received?: unknown } =>
+            e.code !== 'invalid_type' ||
+            !('received' in e) ||
+            (e as { received: unknown }).received !== 'undefined',
         )
         .map((e) => `${e.path.join('.')}: ${e.message}`);
 

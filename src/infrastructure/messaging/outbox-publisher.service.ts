@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-misused-promises, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/require-await */
 import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import { OutboxService } from '../database/outbox/outbox.service';
 import { OutboxEventEntity } from '../database/outbox/outbox.entity';
@@ -31,16 +30,18 @@ export class OutboxPublisherService implements OnModuleInit {
     this.logger.log('Starting outbox event publisher');
 
     // Process outbox events every 5 seconds
-    this.processingInterval = setInterval(async () => {
-      if (!this.isProcessing) {
-        await this.processOutboxEvents();
-      }
+    this.processingInterval = setInterval(() => {
+      void (async () => {
+        if (!this.isProcessing) {
+          await this.processOutboxEvents();
+        }
+      })();
     }, 5000);
 
     // Cleanup processed events every hour
     setInterval(
-      async () => {
-        await this.cleanupProcessedEvents();
+      () => {
+        void this.cleanupProcessedEvents();
       },
       60 * 60 * 1000,
     );
@@ -116,7 +117,7 @@ export class OutboxPublisherService implements OnModuleInit {
       eventType: event.eventType,
       aggregateId: event.aggregateId,
       aggregateType: event.aggregateType,
-      eventData: event.eventData,
+      eventData: event.eventData as Record<string, unknown>,
       metadata: {
         eventId: event.id,
         version: event.version,
@@ -127,6 +128,7 @@ export class OutboxPublisherService implements OnModuleInit {
     await this.messageQueue.sendMessage(message);
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   private async handleFailedEvent(event: OutboxEventEntity): Promise<void> {
     // Send to Dead Letter Queue or monitoring system
     this.logger.error(

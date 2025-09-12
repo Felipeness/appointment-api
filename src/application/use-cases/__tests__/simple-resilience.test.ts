@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/require-await */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import { SagaOrchestrator } from '../../../common/saga/saga-orchestrator';
 import { DeadLetterQueueHandler } from '../../../common/resilience/dlq-handler';
 import {
@@ -31,10 +28,12 @@ describe('Simple Resilience Tests', () => {
         {
           id: 'step1',
           name: 'First Step',
+          // eslint-disable-next-line @typescript-eslint/require-await
           action: async () => {
             executionOrder.push('action1');
             return 'result1';
           },
+          // eslint-disable-next-line @typescript-eslint/require-await
           compensation: async () => {
             executionOrder.push('compensation1');
           },
@@ -42,10 +41,12 @@ describe('Simple Resilience Tests', () => {
         {
           id: 'step2',
           name: 'Second Step',
+          // eslint-disable-next-line @typescript-eslint/require-await
           action: async () => {
             executionOrder.push('action2');
             return 'result2';
           },
+          // eslint-disable-next-line @typescript-eslint/require-await
           compensation: async () => {
             executionOrder.push('compensation2');
           },
@@ -65,10 +66,12 @@ describe('Simple Resilience Tests', () => {
         {
           id: 'step1',
           name: 'First Step (Success)',
+          // eslint-disable-next-line @typescript-eslint/require-await
           action: async () => {
             executionOrder.push('action1');
             return 'result1';
           },
+          // eslint-disable-next-line @typescript-eslint/require-await
           compensation: async () => {
             executionOrder.push('compensation1');
           },
@@ -76,10 +79,12 @@ describe('Simple Resilience Tests', () => {
         {
           id: 'step2',
           name: 'Second Step (Failure)',
+          // eslint-disable-next-line @typescript-eslint/require-await
           action: async () => {
             executionOrder.push('action2');
             throw new Error('Step 2 failed');
           },
+          // eslint-disable-next-line @typescript-eslint/require-await
           compensation: async () => {
             executionOrder.push('compensation2');
           },
@@ -118,7 +123,7 @@ describe('Simple Resilience Tests', () => {
       for (let i = 0; i < 3; i++) {
         try {
           await circuitBreaker.execute(failingOperation);
-        } catch (error) {
+        } catch {
           // Expected
         }
       }
@@ -143,7 +148,7 @@ describe('Simple Resilience Tests', () => {
   });
 
   describe('Dead Letter Queue', () => {
-    it('should handle message failures correctly', async () => {
+    it('should handle message failures correctly', () => {
       const testMessage = { id: 'test-msg-1', data: 'test' };
       const error = new Error('Processing failed');
 
@@ -155,7 +160,7 @@ describe('Simple Resilience Tests', () => {
       expect(healthStatus.config.maxRetries).toBe(2);
     });
 
-    it('should send to DLQ after max retries', async () => {
+    it('should send to DLQ after max retries', () => {
       const testMessage = { id: 'test-msg-2', data: 'test' };
       const error = new Error('Persistent failure');
 
@@ -166,7 +171,7 @@ describe('Simple Resilience Tests', () => {
       expect(healthStatus.config.maxRetries).toBe(2);
     });
 
-    it('should process DLQ messages', async () => {
+    it('should process DLQ messages', () => {
       const result = dlqHandler.processDLQMessages();
 
       expect(result).toHaveProperty('processed');
@@ -183,6 +188,7 @@ describe('Simple Resilience Tests', () => {
 
       try {
         // Step 1: Circuit breaker protects external service call
+        // eslint-disable-next-line @typescript-eslint/require-await
         await circuitBreaker.execute(async () => {
           // Simulate external service success
           return { status: 'validated' };
@@ -193,7 +199,9 @@ describe('Simple Resilience Tests', () => {
           {
             id: 'reserve-slot',
             name: 'Reserve Time Slot',
+            // eslint-disable-next-line @typescript-eslint/require-await
             action: async () => 'slot-reserved',
+
             compensation: async () => {
               // Release slot
             },
@@ -201,7 +209,9 @@ describe('Simple Resilience Tests', () => {
           {
             id: 'send-notification',
             name: 'Send Confirmation',
+            // eslint-disable-next-line @typescript-eslint/require-await
             action: async () => 'notification-sent',
+
             compensation: async () => {
               // Send cancellation
             },
@@ -213,7 +223,7 @@ describe('Simple Resilience Tests', () => {
           sagaSteps,
         );
 
-        if (sagaExecution.status === 'COMPLETED') {
+        if ((sagaExecution.status as string) === 'COMPLETED') {
           processedSuccessfully = true;
         }
       } catch (error) {

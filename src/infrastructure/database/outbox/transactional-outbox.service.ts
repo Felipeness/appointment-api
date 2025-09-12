@@ -11,6 +11,21 @@ export interface OutboxEvent {
   version?: number;
 }
 
+export interface OutboxEventRecord {
+  id: string;
+  aggregateId: string;
+  aggregateType: string;
+  eventType: string;
+  eventData: any;
+  status: string;
+  version: number;
+  retryCount: number;
+  error?: string | null;
+  createdAt: Date;
+  processedAt?: Date | null;
+  maxRetries: number;
+}
+
 @Injectable()
 export class TransactionalOutboxService {
   private readonly logger = new Logger(TransactionalOutboxService.name);
@@ -117,7 +132,7 @@ export class TransactionalOutboxService {
         aggregateId: event.aggregateId,
         version: event.version,
         occurredAt: event.createdAt.toISOString(),
-      });
+      } as Record<string, unknown>);
 
       // Mark as processed
       await this.prisma.outboxEvent.update({
@@ -139,7 +154,10 @@ export class TransactionalOutboxService {
   /**
    * Handle event processing errors
    */
-  private async handleEventError(event: any, error: any): Promise<void> {
+  private async handleEventError(
+    event: OutboxEventRecord,
+    error: unknown,
+  ): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (event.retryCount >= this.MAX_RETRIES) {

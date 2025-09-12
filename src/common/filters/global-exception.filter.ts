@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/restrict-template-expressions */
 import {
   ExceptionFilter,
   Catch,
@@ -20,7 +19,7 @@ export interface ErrorResponse {
   method: string;
   message: string | string[];
   error: string;
-  details?: any;
+  details?: Record<string, unknown>;
   correlationId?: string;
 }
 
@@ -49,7 +48,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const path = request.url;
     const method = request.method;
     const correlationId =
-      (request.headers['x-correlation-id'] as string) ||
+      (request.headers['x-correlation-id'] as string) ??
       this.generateCorrelationId();
 
     // Handle HTTP Exceptions (NestJS built-in)
@@ -65,13 +64,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         message:
           typeof exceptionResponse === 'string'
             ? exceptionResponse
-            : (exceptionResponse as any).message || exception.message,
+            : this.safeStringify(
+                (exceptionResponse as Record<string, unknown>).message ??
+                  exception.message,
+              ),
         error:
           typeof exceptionResponse === 'string'
             ? HttpStatus[status] || 'Unknown Error'
-            : (exceptionResponse as any).error ||
-              HttpStatus[status] ||
-              'Unknown Error',
+            : this.safeStringify(
+                (exceptionResponse as Record<string, unknown>).error ??
+                  HttpStatus[status] ??
+                  'Unknown Error',
+              ),
         correlationId,
       };
     }
@@ -95,7 +99,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         method,
         message: 'Invalid data provided',
         error: 'Validation Error',
-        details: 'Data validation failed. Please check your input.',
+        details: {
+          message: 'Data validation failed. Please check your input.',
+        },
         correlationId,
       };
     }
@@ -110,7 +116,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       method,
       message: isProduction
         ? 'Internal server error'
-        : (exception as Error)?.message || 'Unknown error',
+        : ((exception as Error)?.message ?? 'Unknown error'),
       error: 'Internal Server Error',
       details: isProduction
         ? undefined
@@ -197,7 +203,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private extractPrismaErrorDetails(
     exception: PrismaClientKnownRequestError,
-  ): any {
+  ): Record<string, unknown> {
     const isProduction = process.env.NODE_ENV === 'production';
 
     if (isProduction) {
@@ -219,34 +225,37 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     request: Request,
   ): void {
     const { statusCode, correlationId, message } = errorResponse;
-    const userAgent = request.headers['user-agent'] || 'Unknown';
-    const ip = request.ip || 'Unknown';
+    const userAgent = request.headers['user-agent'] ?? 'Unknown';
+    const ip = request.ip ?? 'Unknown';
 
     const logContext = {
       correlationId,
       method: request.method,
       url: request.url,
       statusCode,
-      userAgent,
-      ip,
-      body: request.body,
+      userAgent: Array.isArray(userAgent) ? userAgent.join(', ') : userAgent,
+      ip: Array.isArray(ip) ? ip.join(', ') : ip,
+      body: request.body as unknown,
       query: request.query,
       params: request.params,
     };
 
     if (statusCode >= 500) {
       this.logger.error(
-        `Server Error: ${message}`,
+        `Server Error: ${Array.isArray(message) ? message.join(', ') : message}`,
         exception instanceof Error
           ? exception.stack
           : JSON.stringify(exception),
         JSON.stringify(logContext),
       );
     } else if (statusCode >= 400) {
-      this.logger.warn(`Client Error: ${message}`, JSON.stringify(logContext));
+      this.logger.warn(
+        `Client Error: ${Array.isArray(message) ? message.join(', ') : message}`,
+        JSON.stringify(logContext),
+      );
     } else {
       this.logger.log(
-        `Request completed: ${message}`,
+        `Request completed: ${Array.isArray(message) ? message.join(', ') : message}`,
         JSON.stringify(logContext),
       );
     }
@@ -254,5 +263,29 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   private generateCorrelationId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private safeStringify(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    if (value === null || value === undefined) {
+      return String(value);
+    }
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+    if (typeof value === 'object') {
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return '[object Object]';
+      }
+    }
+    // This will handle primitives like numbers, booleans, etc.
+    return String(value);
   }
 }

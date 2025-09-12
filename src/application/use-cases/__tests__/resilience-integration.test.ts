@@ -326,7 +326,6 @@ describe('Resilience Integration Tests', () => {
 
       // Assert
       expect(healthCheck.database).toBe(false);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(healthCheck.connectionCircuitBreaker.isHealthy).toBe(false);
     });
   });

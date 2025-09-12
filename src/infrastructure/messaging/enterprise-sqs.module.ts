@@ -1,16 +1,28 @@
-/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SqsModule } from '@ssut/nestjs-sqs';
 import { EnterpriseAppointmentProducer } from './enterprise-appointment.producer';
+
+interface AwsConfig {
+  sqsQueueUrl: string;
+  region: string;
+  dlqArn?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+}
 
 @Module({
   imports: [
     ConfigModule,
     SqsModule.registerAsync({
       imports: [ConfigModule],
+      // eslint-disable-next-line @typescript-eslint/require-await
       useFactory: async (configService: ConfigService) => {
-        const awsConfig = configService.get('aws');
+        const awsConfig = configService.get<AwsConfig>('aws');
+
+        if (!awsConfig) {
+          throw new Error('AWS configuration is required');
+        }
 
         return {
           consumers: [
@@ -28,10 +40,13 @@ import { EnterpriseAppointmentProducer } from './enterprise-appointment.producer
               messageRetentionPeriod: 1209600, // 14 days
               receiveMessageWaitTimeSeconds:
                 Number(process.env.SQS_WAIT_TIME) || 20,
-              reddrivePolicy: {
-                deadLetterTargetArn: awsConfig.dlqArn,
-                maxReceiveCount: Number(process.env.SQS_MAX_RECEIVE_COUNT) || 3,
-              },
+              reddrivePolicy: awsConfig.dlqArn
+                ? {
+                    deadLetterTargetArn: awsConfig.dlqArn,
+                    maxReceiveCount:
+                      Number(process.env.SQS_MAX_RECEIVE_COUNT) || 3,
+                  }
+                : undefined,
             },
           ],
           producers: [

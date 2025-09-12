@@ -12,7 +12,7 @@
 ## 🚀 **Key Features**
 
 - **🔄 Asynchronous Processing**: SQS with exponential backoff, idempotency keys, and DLQ redrive policies
-- **🧱 Architecture**: Hexagonal (Clean) with DDD modeling (Bounded Contexts, Aggregates, Ports/Adapters)
+- **🧱 Architecture**: Clean Architecture with DDD modeling (Bounded Contexts, Aggregates, Domain Entities)
 - **🛡️ Enterprise Security**: Rate limiting, input validation (class-validator), secrets management, and IAM least privilege
 - **📈 Scalability**: Auto scaling with backpressure control (batch size, concurrency, visibility timeout)
 - **🔒 Data Consistency**: Transactional Outbox pattern with Saga orchestration when needed
@@ -82,7 +82,7 @@ graph TB
     Gateway --> Security
 ```
 
-### **Hexagonal Architecture (Clean) with DDD**
+### **Clean Architecture with Domain-Driven Design**
 
 ```
 src/
@@ -276,11 +276,11 @@ bun run format       # Formata código com Prettier
 - **ISP**: Interfaces específicas por contexto  
 - **DIP**: Injeção de dependência
 
-### Hexagonal Architecture (Clean)
-- **Domain Core**: Aggregates, entities, value objects e regras de negócio (DDD)
-- **Ports**: Interfaces que definem contratos (repository, messaging, etc.)
-- **Application Services**: Orquestração de use cases e transações
-- **Adapters**: Implementações concretas (Prisma, SQS, HTTP, etc.)
+### Clean Architecture Layers
+- **Domain Layer**: Aggregates, entities, value objects e regras de negócio (DDD)
+- **Application Layer**: Use cases, DTOs e interfaces (ports)
+- **Infrastructure Layer**: Implementações concretas (adapters) para Prisma, SQS, HTTP
+- **Presentation Layer**: Controllers, middlewares e validação de entrada
 
 ### Design Patterns
 - **Repository Pattern**: Abstração do acesso a dados (Ports/Adapters)

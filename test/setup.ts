@@ -40,7 +40,7 @@ declare global {
 
 // Custom Jest matchers
 expect.extend({
-  toBeValidDate(received: any) {
+  toBeValidDate(received: unknown) {
     const pass = received instanceof Date && !isNaN(received.getTime());
     if (pass) {
       return {
@@ -55,19 +55,19 @@ expect.extend({
     }
   },
 
-  toBeValidUUID(received: any) {
+  toBeValidUUID(received: unknown) {
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const pass = typeof received === 'string' && uuidRegex.test(received);
 
     if (pass) {
       return {
-        message: () => `expected ${received} not to be a valid UUID`,
+        message: () => `expected ${String(received)} not to be a valid UUID`,
         pass: true,
       };
     } else {
       return {
-        message: () => `expected ${received} to be a valid UUID`,
+        message: () => `expected ${String(received)} to be a valid UUID`,
         pass: false,
       };
     }

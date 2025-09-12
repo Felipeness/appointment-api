@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import {
   Controller,
   Post,
@@ -155,7 +154,7 @@ export class AppointmentsController {
       psychologistId: createAppointmentDto.psychologistId,
       patientEmail: createAppointmentDto.patientEmail,
       scheduledAt: createAppointmentDto.scheduledAt,
-      priority: priority || 'auto-determined',
+      priority: priority ?? 'auto-determined',
       traceId,
       userId,
     });
@@ -190,12 +189,16 @@ export class AppointmentsController {
     } catch (error) {
       const processingTime = Date.now() - startTime;
 
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       this.logger.error(`Enterprise appointment request failed`, {
         psychologistId: createAppointmentDto.psychologistId,
-        error: error.message,
+        error: errorMessage,
         traceId,
         processingTimeMs: processingTime,
-        stack: error.stack,
+        stack: errorStack,
       });
 
       // Re-throw for global exception handler to process
@@ -272,7 +275,7 @@ export class AppointmentsController {
     this.logger.log(`Received enterprise batch appointment request`, {
       batchId,
       appointmentCount: batchRequest.appointments.length,
-      priority: priority || 'auto-determined',
+      priority: priority ?? 'auto-determined',
       traceId,
     });
 
@@ -309,9 +312,12 @@ export class AppointmentsController {
     } catch (error) {
       const processingTime = Date.now() - startTime;
 
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+
       this.logger.error(`Enterprise batch appointment request failed`, {
         batchId,
-        error: error.message,
+        error: errorMessage,
         traceId,
         processingTimeMs: processingTime,
       });

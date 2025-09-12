@@ -1,8 +1,4 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { performance } from 'perf_hooks';
 import { EnterpriseAppointmentProducer } from '../../src/infrastructure/messaging/enterprise-appointment.producer';
@@ -19,11 +15,11 @@ describe('SQS Producer Performance Tests', () => {
   beforeAll(async () => {
     mockSQSClient = {
       send: jest.fn().mockResolvedValue({}),
-    } as any;
+    } as jest.Mocked<SQSClient>;
 
     mockCircuitBreaker = {
-      execute: jest.fn().mockImplementation((fn: any) => fn()),
-    } as any;
+      execute: jest.fn().mockImplementation((fn: () => Promise<void>) => fn()),
+    } as jest.Mocked<CircuitBreaker>;
 
     module = await Test.createTestingModule({
       providers: [

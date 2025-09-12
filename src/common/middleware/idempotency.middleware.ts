@@ -10,7 +10,7 @@ export interface RequestWithIdempotency extends Request {
 
 interface CachedResponse {
   statusCode: number;
-  body: any;
+  body: unknown;
   headers: Record<string, string>;
   timestamp: number;
 }
@@ -77,7 +77,9 @@ export class IdempotencyMiddleware implements NestMiddleware {
       const cachedResponseStr = await this.redis.get(cacheKey);
 
       if (cachedResponseStr) {
-        const cachedResponse: CachedResponse = JSON.parse(cachedResponseStr);
+        const cachedResponse: CachedResponse = JSON.parse(
+          cachedResponseStr,
+        ) as CachedResponse;
 
         // Set cached headers
         Object.entries(cachedResponse.headers).forEach(([key, value]) => {
@@ -94,46 +96,48 @@ export class IdempotencyMiddleware implements NestMiddleware {
       // Intercept response to cache it
       const originalSend = res.send;
       const originalJson = res.json;
-      let responseBody: any;
+      let responseBody: unknown;
       let responseHeaders: Record<string, string> = {};
 
       // Override json method
-      res.json = function (body: any) {
+      res.json = function (this: Response, body: unknown) {
         responseBody = body;
         responseHeaders = this.getHeaders() as Record<string, string>;
-        return originalJson.call(this, body);
+        return originalJson.call(this, body) as Response;
       };
 
       // Override send method
-      res.send = function (body: any) {
+      res.send = function (this: Response, body: unknown) {
         responseBody = body;
         responseHeaders = this.getHeaders() as Record<string, string>;
-        return originalSend.call(this, body);
+        return originalSend.call(this, body) as Response;
       };
 
       // Continue to next middleware
       next();
 
       // Cache successful responses (2xx status codes)
-      res.on('finish', async () => {
-        if (res.statusCode >= 200 && res.statusCode < 300 && responseBody) {
-          const cachedResponse: CachedResponse = {
-            statusCode: res.statusCode,
-            body: responseBody,
-            headers: responseHeaders,
-            timestamp: Date.now(),
-          };
+      res.on('finish', () => {
+        void (async () => {
+          if (res.statusCode >= 200 && res.statusCode < 300 && responseBody) {
+            const cachedResponse: CachedResponse = {
+              statusCode: res.statusCode,
+              body: responseBody,
+              headers: responseHeaders,
+              timestamp: Date.now(),
+            };
 
-          try {
-            await this.redis.setEx(
-              cacheKey,
-              this.IDEMPOTENCY_TTL,
-              JSON.stringify(cachedResponse),
-            );
-          } catch (error) {
-            console.error('Failed to cache idempotent response:', error);
+            try {
+              await this.redis.setEx(
+                cacheKey,
+                this.IDEMPOTENCY_TTL,
+                JSON.stringify(cachedResponse),
+              );
+            } catch (error) {
+              console.error('Failed to cache idempotent response:', error);
+            }
           }
-        }
+        })();
       });
     } catch (error) {
       console.error('Idempotency middleware error:', error);

@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-
+/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-floating-promises */
 import { Test, TestingModule } from '@nestjs/testing';
 import { RedisIdempotencyService } from '../idempotency.service';
 import { IdempotencyRecord } from '../interfaces/idempotency.interface';
@@ -18,7 +16,7 @@ describe('RedisIdempotencyService', () => {
 
   afterEach(() => {
     // Clear in-memory cache after each test
-    (service as any).cache.clear();
+    (service as { cache: Map<string, unknown> }).cache.clear();
   });
 
   it('should be defined', () => {
@@ -41,7 +39,7 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000), // 1 hour
       };
 
-      service.store(record);
+      void service.store(record);
 
       const retrieved = service.get(
         'test-key-123',
@@ -52,8 +50,12 @@ describe('RedisIdempotencyService', () => {
       expect(retrieved).toBeDefined();
       expect(retrieved?.key).toBe(record.key);
       expect(retrieved?.userId).toBe(record.userId);
-      expect(retrieved?.response.statusCode).toBe(202);
-      expect(retrieved?.response.body).toEqual(record.response.body);
+      expect((retrieved?.response as { statusCode: number }).statusCode).toBe(
+        202,
+      );
+      expect((retrieved?.response as { body: unknown }).body).toEqual(
+        record.response.body,
+      );
     });
 
     it('should return null for non-existent key', () => {
@@ -72,7 +74,7 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() - 1000), // Expired 1 second ago
       };
 
-      service.store(record);
+      void service.store(record);
 
       const result = service.get('expired-key');
       expect(result).toBeNull();
@@ -91,7 +93,7 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      service.store(record);
+      void service.store(record);
 
       const exists = service.exists('exists-test');
       expect(exists).toBe(true);
@@ -113,7 +115,7 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() - 1000),
       };
 
-      service.store(record);
+      void service.store(record);
 
       const exists = service.exists('expired-exists');
       expect(exists).toBe(false);
@@ -217,10 +219,10 @@ describe('RedisIdempotencyService', () => {
       service.store(validRecord);
 
       // Verify both exist initially
-      expect((service as any).cache.size).toBe(2);
+      expect((service as { cache: Map<string, unknown> }).cache.size).toBe(2);
 
       // Run cleanup
-      service.cleanup();
+      void service.cleanup();
 
       // Verify only valid record remains
       const expiredExists = service.exists('expired-cleanup');

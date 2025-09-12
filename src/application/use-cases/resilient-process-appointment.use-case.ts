@@ -1,4 +1,10 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+
+interface PrismaTransaction {
+  appointment: {
+    create: (args: { data: unknown }) => Promise<unknown>;
+  };
+}
 import { SagaOrchestrator } from '../../common/saga/saga-orchestrator';
 import { SagaStep } from '../../common/saga/saga.types';
 import { DeadLetterQueueHandler } from '../../common/resilience/dlq-handler';
@@ -127,9 +133,10 @@ export class ResilientProcessAppointmentUseCase {
         action: async () => {
           return await this.saveAppointmentWithOutbox(message);
         },
+        // eslint-disable-next-line @typescript-eslint/require-await
         compensation: async () => {
           // Delete the appointment if it was saved
-          await this.deleteAppointment(message.appointmentId);
+          this.deleteAppointment(message.appointmentId);
         },
         retryable: true,
         maxRetries: 5,
@@ -223,18 +230,18 @@ export class ResilientProcessAppointmentUseCase {
     const patient = await this.patientRepository.findByEmail(
       message.patientEmail,
     );
-    const patientId = patient?.id || uuidv4();
+    const patientId = patient?.id ?? uuidv4();
 
     const appointment = new Appointment(
       message.appointmentId,
       patientId,
       message.psychologistId,
       scheduledDate,
-      message.duration || 60,
-      (message.appointmentType as AppointmentType) ||
+      message.duration ?? 60,
+      (message.appointmentType as AppointmentType) ??
         AppointmentType.CONSULTATION,
       AppointmentStatus.CONFIRMED,
-      (message.meetingType as MeetingType) || MeetingType.IN_PERSON,
+      (message.meetingType as MeetingType) ?? MeetingType.IN_PERSON,
       message.meetingUrl,
       message.meetingRoom,
       message.reason,
@@ -265,8 +272,7 @@ export class ResilientProcessAppointmentUseCase {
           confirmedAt: new Date().toISOString(),
         },
       },
-      async (prismaTransaction) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+      async (prismaTransaction: PrismaTransaction) => {
         await prismaTransaction.appointment.create({
           data: {
             id: appointment.id,
@@ -298,8 +304,7 @@ export class ResilientProcessAppointmentUseCase {
     return message.appointmentId;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  private async deleteAppointment(appointmentId: string): Promise<void> {
+  private deleteAppointment(appointmentId: string): void {
     try {
       // In production, this would use the repository pattern
       this.logger.log(`Compensating: deleting appointment ${appointmentId}`);

@@ -9,12 +9,10 @@ import {
   Min,
   IsUrl,
   ValidateIf,
-  IsUUID,
   Matches,
   Length,
-  Max,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { AppointmentType, MeetingType } from '../../domain/entities/enums';
 import {
@@ -26,14 +24,14 @@ export class CreateAppointmentDto {
   /**
    * Validate the DTO using Zod schema
    */
-  static validateWithZod(data: any): CreateAppointmentInput {
+  static validateWithZod(data: unknown): CreateAppointmentInput {
     return CreateAppointmentSchema.parse(data);
   }
 
   /**
    * Create a DTO instance with comprehensive validation
    */
-  static create(data: any): CreateAppointmentDto {
+  static create(data: unknown): CreateAppointmentDto {
     // First validate with Zod
     const validatedData = CreateAppointmentDto.validateWithZod(data);
 
@@ -49,7 +47,7 @@ export class CreateAppointmentDto {
   })
   @IsEmail({}, { message: 'Invalid email format' })
   @Length(1, 255, { message: 'Email must be between 1 and 255 characters' })
-  @Transform(({ value }) =>
+  @Transform(({ value }): string =>
     typeof value === 'string' ? value.toLowerCase().trim() : value,
   )
   patientEmail: string;
@@ -63,10 +61,10 @@ export class CreateAppointmentDto {
   @Length(2, 150, {
     message: 'Patient name must be between 2 and 150 characters',
   })
-  @Matches(/^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-\.']+$/, {
+  @Matches(/^[a-zA-ZÀ-ÿ\u00C0-\u017F\s\-.']+$/, {
     message: 'Patient name contains invalid characters',
   })
-  @Transform(({ value }) =>
+  @Transform(({ value }): string =>
     typeof value === 'string' ? value.trim().replace(/[<>]/g, '') : value,
   )
   patientName: string;
@@ -78,12 +76,12 @@ export class CreateAppointmentDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^[\+]?[\d\s\-\(\)]{8,20}$/, {
+  @Matches(/^[+]?[\d\s\-()]{8,20}$/, {
     message: 'Invalid phone number format',
   })
-  @Transform(({ value }) =>
+  @Transform(({ value }): string | undefined =>
     typeof value === 'string'
-      ? value.replace(/[^\d+\-\(\)\s]/g, '').trim()
+      ? value.replace(/[^\d+\-()\s]/g, '').trim()
       : value,
   )
   patientPhone?: string;

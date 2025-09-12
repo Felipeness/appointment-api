@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { CircuitBreaker } from '../../common/resilience/circuit-breaker';
@@ -49,9 +48,12 @@ export class ResilientPrismaService implements OnModuleInit {
   }
 
   // Wrapped Prisma operations with circuit breaker
-  async findUnique<T>(model: string, args: any): Promise<T | null> {
+  async findUnique<T>(
+    model: string,
+    args: Record<string, unknown>,
+  ): Promise<T | null> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as any)[model];
+      const modelProxy = (this.prisma as Record<string, any>)[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
@@ -59,9 +61,12 @@ export class ResilientPrismaService implements OnModuleInit {
     });
   }
 
-  async findMany<T>(model: string, args: any = {}): Promise<T[]> {
+  async findMany<T>(
+    model: string,
+    args: Record<string, unknown> = {},
+  ): Promise<T[]> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as any)[model];
+      const modelProxy = (this.prisma as Record<string, any>)[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
@@ -69,9 +74,9 @@ export class ResilientPrismaService implements OnModuleInit {
     });
   }
 
-  async create<T>(model: string, args: any): Promise<T> {
+  async create<T>(model: string, args: Record<string, unknown>): Promise<T> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as any)[model];
+      const modelProxy = (this.prisma as Record<string, any>)[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
@@ -79,9 +84,9 @@ export class ResilientPrismaService implements OnModuleInit {
     });
   }
 
-  async update<T>(model: string, args: any): Promise<T> {
+  async update<T>(model: string, args: Record<string, unknown>): Promise<T> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as any)[model];
+      const modelProxy = (this.prisma as Record<string, any>)[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
@@ -89,9 +94,9 @@ export class ResilientPrismaService implements OnModuleInit {
     });
   }
 
-  async delete<T>(model: string, args: any): Promise<T> {
+  async delete<T>(model: string, args: Record<string, unknown>): Promise<T> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as any)[model];
+      const modelProxy = (this.prisma as Record<string, any>)[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
@@ -115,8 +120,8 @@ export class ResilientPrismaService implements OnModuleInit {
   // Health check for monitoring
   async healthCheck(): Promise<{
     database: boolean;
-    connectionCircuitBreaker: any;
-    queryCircuitBreaker: any;
+    connectionCircuitBreaker: Record<string, unknown>;
+    queryCircuitBreaker: Record<string, unknown>;
   }> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;

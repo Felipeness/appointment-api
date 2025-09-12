@@ -4,6 +4,7 @@ import { EnterpriseAppointmentProducer } from '../../infrastructure/messaging/en
 import type { PsychologistRepository } from '../../domain/repositories/psychologist.repository';
 import { INJECTION_TOKENS } from '../../shared/constants/injection-tokens';
 import { PsychologistNotFoundException } from '../../common/exceptions/domain.exceptions';
+import { AppointmentType } from '../../domain/entities/enums';
 import { v4 as uuidv4 } from 'uuid';
 import { addHours, isBefore } from 'date-fns';
 
@@ -38,7 +39,7 @@ export class EnterpriseScheduleAppointmentUseCase {
     },
   ): Promise<EnterpriseScheduleResult> {
     const appointmentId = uuidv4();
-    const traceId = options?.traceId || this.generateTraceId();
+    const traceId = options?.traceId ?? this.generateTraceId();
     const priority = this.determinePriority(dto, options?.priority);
 
     this.logger.log(`Starting enterprise appointment scheduling`, {
@@ -61,7 +62,7 @@ export class EnterpriseScheduleAppointmentUseCase {
         patientPhone: dto.patientPhone,
         psychologistId: dto.psychologistId,
         scheduledAt: dto.scheduledAt,
-        duration: dto.duration || 60,
+        duration: dto.duration ?? 60,
         appointmentType: dto.appointmentType,
         meetingType: dto.meetingType,
         meetingUrl: dto.meetingUrl,
@@ -159,14 +160,14 @@ export class EnterpriseScheduleAppointmentUseCase {
 
     // VIP patients or urgent appointments get high priority
     if (
-      dto.appointmentType === ('EMERGENCY' as any) ||
+      dto.appointmentType === AppointmentType.EMERGENCY ||
       dto.reason?.toLowerCase().includes('urgent')
     ) {
       return 'high';
     }
 
     // Follow-up appointments get normal priority
-    if (dto.appointmentType === ('FOLLOW_UP' as any)) {
+    if (dto.appointmentType === AppointmentType.FOLLOW_UP) {
       return 'normal';
     }
 
@@ -236,8 +237,8 @@ export class EnterpriseScheduleAppointmentUseCase {
       batchId?: string;
     },
   ): Promise<EnterpriseScheduleResult[]> {
-    const batchId = options?.batchId || uuidv4();
-    const traceId = options?.traceId || this.generateTraceId();
+    const batchId = options?.batchId ?? uuidv4();
+    const traceId = options?.traceId ?? this.generateTraceId();
 
     this.logger.log(`Starting batch appointment scheduling`, {
       batchId,
@@ -269,7 +270,7 @@ export class EnterpriseScheduleAppointmentUseCase {
             status: 'failed',
             queuedAt: new Date().toISOString(),
             traceId,
-            priority: options?.priority || 'normal',
+            priority: options?.priority ?? 'normal',
           });
 
           this.logger.error(`Batch appointment failed`, {

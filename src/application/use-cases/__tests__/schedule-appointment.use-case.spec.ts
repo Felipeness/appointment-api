@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Test, TestingModule } from '@nestjs/testing';
 import { EnterpriseScheduleAppointmentUseCase } from '../enterprise-schedule-appointment.use-case';
 import type { PsychologistRepository } from '../../../domain/repositories/psychologist.repository';
@@ -91,7 +90,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       expect(result.priority).toBeDefined();
       expect(result.estimatedProcessingTime).toBeDefined();
 
-      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           appointmentId: result.appointmentId,
           patientEmail: dto.patientEmail,
@@ -100,17 +100,16 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
           scheduledAt: dto.scheduledAt,
         }),
         expect.objectContaining({
-          priority: expect.any(String),
-          traceId: expect.any(String),
-          messageGroupId: expect.any(String),
-          deduplicationId: expect.any(String),
+          priority: expect.any(String) as string,
+          traceId: expect.any(String) as string,
+          messageGroupId: expect.any(String) as string,
+          deduplicationId: expect.any(String) as string,
         }),
       );
 
       // Verify fast validation
-      expect(psychologistRepository.findById).toHaveBeenCalledWith(
-        dto.psychologistId,
-      );
+      const findById = psychologistRepository.findById;
+      expect(findById).toHaveBeenCalledWith(dto.psychologistId);
     });
 
     it('should return failed status when appointment is within 24 hours', async () => {
@@ -120,7 +119,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.status).toBe('failed');
-      expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return failed status when psychologist not found', async () => {
@@ -130,7 +130,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.status).toBe('failed');
-      expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return failed status when psychologist is inactive', async () => {
@@ -141,7 +142,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.status).toBe('failed');
-      expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).not.toHaveBeenCalled();
     });
 
     it('should use high priority for emergency appointments', async () => {
@@ -157,7 +159,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.priority).toBe('high');
-      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
           priority: 'high',
@@ -180,7 +183,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
 
       await useCase.execute(dto);
 
-      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           duration: 90,
           notes: 'Special requirements',
@@ -202,7 +206,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
 
       expect(result1.appointmentId).not.toBe(result2.appointmentId);
       expect(result1.traceId).not.toBe(result2.traceId);
-      expect(enterpriseProducer.sendMessage).toHaveBeenCalledTimes(2);
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).toHaveBeenCalledTimes(2);
     });
 
     it('should support custom priority and trace ID options', async () => {
@@ -221,7 +226,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
 
       expect(result.priority).toBe('high');
       expect(result.traceId).toBe(customTraceId);
-      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
+      const sendMessage = enterpriseProducer.sendMessage;
+      expect(sendMessage).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
           priority: 'high',

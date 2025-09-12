@@ -19,6 +19,7 @@ export enum AppointmentType {
 
 export enum MeetingType {
   IN_PERSON = 'IN_PERSON',
+  ONLINE = 'ONLINE', // Added ONLINE for backward compatibility
   VIDEO_CALL = 'VIDEO_CALL',
   PHONE_CALL = 'PHONE_CALL',
   HYBRID = 'HYBRID',
@@ -27,6 +28,7 @@ export enum MeetingType {
 export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
+  OTHER = 'OTHER', // For Prisma compatibility
   NON_BINARY = 'NON_BINARY',
   PREFER_NOT_TO_SAY = 'PREFER_NOT_TO_SAY',
 }

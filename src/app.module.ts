@@ -1,10 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import awsConfig from './infrastructure/config/aws.config';
-import databaseConfig from './infrastructure/config/database.config';
-import redisConfig from './infrastructure/config/redis.config';
-
 import { ConfigurationModule } from './infrastructure/config/configuration.module';
 import { AppointmentModule } from './appointment.module';
 import { IdempotencyModule } from './common/modules/idempotency.module';
@@ -22,6 +18,7 @@ import { AppService } from './app.service';
 
     // Schedule module for cron jobs (outbox processing)
     ScheduleModule.forRoot(),
+
 
     // Feature modules
     AppointmentModule,

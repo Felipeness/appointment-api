@@ -22,11 +22,12 @@ describe('CreateAppointmentDto', () => {
     });
 
     it('should pass validation without optional fields', async () => {
-      const {
-        patientPhone: _patientPhone, // eslint-disable-line @typescript-eslint/no-unused-vars
-        notes: _notes, // eslint-disable-line @typescript-eslint/no-unused-vars
-        ...requiredData
-      } = validData;
+      const requiredData = {
+        patientEmail: validData.patientEmail,
+        patientName: validData.patientName,
+        psychologistId: validData.psychologistId,
+        scheduledAt: validData.scheduledAt,
+      };
       const dto = plainToClass(CreateAppointmentDto, requiredData);
       const errors = await validate(dto);
 
@@ -45,7 +46,11 @@ describe('CreateAppointmentDto', () => {
     });
 
     it('should fail validation with missing email', async () => {
-      const { patientEmail: _patientEmail, ...invalidData } = validData; // eslint-disable-line @typescript-eslint/no-unused-vars
+      const invalidData = {
+        patientName: validData.patientName,
+        psychologistId: validData.psychologistId,
+        scheduledAt: validData.scheduledAt,
+      };
       const dto = plainToClass(CreateAppointmentDto, invalidData);
       const errors = await validate(dto);
 
@@ -56,7 +61,11 @@ describe('CreateAppointmentDto', () => {
 
   describe('name validation', () => {
     it('should fail validation with missing name', async () => {
-      const { patientName: _patientName, ...invalidData } = validData; // eslint-disable-line @typescript-eslint/no-unused-vars
+      const invalidData = {
+        patientEmail: validData.patientEmail,
+        psychologistId: validData.psychologistId,
+        scheduledAt: validData.scheduledAt,
+      };
       const dto = plainToClass(CreateAppointmentDto, invalidData);
       const errors = await validate(dto);
 
@@ -76,7 +85,11 @@ describe('CreateAppointmentDto', () => {
 
   describe('psychologist ID validation', () => {
     it('should fail validation with missing psychologist ID', async () => {
-      const { psychologistId: _psychologistId, ...invalidData } = validData; // eslint-disable-line @typescript-eslint/no-unused-vars
+      const invalidData = {
+        patientEmail: validData.patientEmail,
+        patientName: validData.patientName,
+        scheduledAt: validData.scheduledAt,
+      };
       const dto = plainToClass(CreateAppointmentDto, invalidData);
       const errors = await validate(dto);
 
@@ -96,7 +109,11 @@ describe('CreateAppointmentDto', () => {
     });
 
     it('should fail validation with missing scheduled date', async () => {
-      const { scheduledAt: _scheduledAt, ...invalidData } = validData; // eslint-disable-line @typescript-eslint/no-unused-vars
+      const invalidData = {
+        patientEmail: validData.patientEmail,
+        patientName: validData.patientName,
+        psychologistId: validData.psychologistId,
+      };
       const dto = plainToClass(CreateAppointmentDto, invalidData);
       const errors = await validate(dto);
 

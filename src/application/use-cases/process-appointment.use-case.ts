@@ -15,6 +15,12 @@ import {
   MeetingType,
 } from '../../domain/entities/enums';
 
+interface PrismaTransaction {
+  appointment: {
+    create: (args: { data: unknown }) => Promise<unknown>;
+  };
+}
+
 export interface AppointmentMessage {
   appointmentId: string;
   patientEmail: string;
@@ -132,11 +138,11 @@ export class ProcessAppointmentUseCase {
         patient.id,
         psychologistId,
         scheduledDate,
-        message.duration || 60,
-        (message.appointmentType as AppointmentType) ||
+        message.duration ?? 60,
+        (message.appointmentType as AppointmentType) ??
           AppointmentType.CONSULTATION,
         AppointmentStatus.CONFIRMED,
-        (message.meetingType as MeetingType) || MeetingType.IN_PERSON,
+        (message.meetingType as MeetingType) ?? MeetingType.IN_PERSON,
         message.meetingUrl,
         message.meetingRoom,
         message.reason,
@@ -168,9 +174,8 @@ export class ProcessAppointmentUseCase {
             confirmedAt: new Date().toISOString(),
           },
         },
-        async (prismaTransaction) => {
+        async (prismaTransaction: PrismaTransaction) => {
           // Save appointment within transaction
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
           await prismaTransaction.appointment.create({
             data: {
               id: confirmedAppointment.id,
@@ -256,9 +261,8 @@ export class ProcessAppointmentUseCase {
           declinedAt: new Date().toISOString(),
         },
       },
-      async (prismaTransaction) => {
+      async (prismaTransaction: PrismaTransaction) => {
         // Save declined appointment within transaction
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         await prismaTransaction.appointment.create({
           data: {
             id: declinedAppointment.id,
@@ -279,15 +283,14 @@ export class ProcessAppointmentUseCase {
     this.logger.warn(
       `Appointment declined using Outbox Pattern: ${appointmentId} - ${reason}`,
     );
-    await this.sendNotification(patientId, 'declined', reason);
+    this.sendNotification(patientId, 'declined', reason);
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  private async sendNotification(
+  private sendNotification(
     patientId: string,
     status: string,
     message: string,
-  ): Promise<void> {
+  ): void {
     this.logger.log(
       `Notification sent to patient ${patientId}: ${status} - ${message}`,
     );

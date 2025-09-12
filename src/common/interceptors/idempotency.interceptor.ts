@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-misused-promises, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import {
   Injectable,
   NestInterceptor,
@@ -12,7 +11,6 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 
 import type {
   IdempotencyService,
@@ -22,6 +20,19 @@ import {
   IDEMPOTENCY_KEY,
   IdempotencyOptions,
 } from '../decorators/idempotency.decorator';
+
+interface RequestWithUser extends Request {
+  user?: {
+    id?: string;
+    userId?: string;
+  };
+}
+
+interface RequestWithRoute extends Request {
+  route: {
+    path?: string;
+  };
+}
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
@@ -36,7 +47,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
   async intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Promise<Observable<any>> {
+  ): Promise<Observable<unknown>> {
     const options = this.reflector.get<IdempotencyOptions>(
       IDEMPOTENCY_KEY,
       context.getHandler(),
@@ -47,7 +58,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     }
 
     const http = context.switchToHttp();
-    const request = http.getRequest<Request>();
+    const request = http.getRequest<RequestWithUser>();
     const response = http.getResponse<Response>();
 
     const idempotencyKey = this.extractIdempotencyKey(request);
@@ -120,44 +131,51 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
     // Process new request and cache result
     return next.handle().pipe(
-      tap(async (data) => {
-        try {
-          const record: IdempotencyRecord = {
-            key: idempotencyKey,
-            userId,
-            endpoint,
-            method: request.method,
-            parameters,
-            response: {
-              statusCode: response.statusCode,
-              body: data,
-              headers: {
-                'content-type': response.getHeader('content-type') as string,
+      tap((data) => {
+        // Using void to handle the Promise properly
+        void (async () => {
+          try {
+            const record: IdempotencyRecord = {
+              key: idempotencyKey,
+              userId,
+              endpoint,
+              method: request.method,
+              parameters,
+              response: {
+                statusCode: response.statusCode,
+                body: data as Record<string, unknown>,
+                headers: {
+                  'content-type':
+                    (response.getHeader('content-type') as string) ??
+                    'application/json',
+                },
               },
-            },
-            createdAt: new Date(),
-            expiresAt: new Date(Date.now() + (options.ttl || 3600) * 1000),
-          };
+              createdAt: new Date(),
+              expiresAt: new Date(Date.now() + (options.ttl ?? 3600) * 1000),
+            };
 
-          await this.idempotencyService.store(record);
+            await this.idempotencyService.store(record);
 
-          // Add idempotency headers to response
-          response.header('X-Idempotency-Key', idempotencyKey);
-          response.header('X-Idempotency-Cached', 'false');
+            // Add idempotency headers to response
+            response.header('X-Idempotency-Key', idempotencyKey);
+            response.header('X-Idempotency-Cached', 'false');
 
-          this.logger.log(`Stored new idempotency record`, {
-            key: idempotencyKey,
-            endpoint,
-            userId,
-            statusCode: response.statusCode,
-          });
-        } catch (error) {
-          this.logger.error(`Failed to store idempotency record`, {
-            key: idempotencyKey,
-            error: error.message,
-          });
-          // Don't fail the request if we can't store idempotency record
-        }
+            this.logger.log(`Stored new idempotency record`, {
+              key: idempotencyKey,
+              endpoint,
+              userId,
+              statusCode: response.statusCode,
+            });
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(`Failed to store idempotency record`, {
+              key: idempotencyKey,
+              error: errorMessage,
+            });
+            // Don't fail the request if we can't store idempotency record
+          }
+        })();
       }),
     );
   }
@@ -174,24 +192,25 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return key?.trim();
   }
 
-  private extractUserId(request: Request): string | undefined {
+  private extractUserId(request: RequestWithUser): string | undefined {
     // Multiple ways to extract user ID
     return (
-      (request.headers['x-user-id'] as string) ||
-      (request as any).user?.id ||
-      (request as any).user?.userId
+      (request.headers['x-user-id'] as string) ??
+      request.user?.id ??
+      request.user?.userId
     );
   }
 
   private buildEndpoint(request: Request): string {
-    return `${request.method}:${request.route?.path || request.path}`;
+    const routePath = (request as RequestWithRoute).route?.path ?? request.path;
+    return `${request.method}:${routePath}`;
   }
 
-  private extractParameters(request: Request): Record<string, any> {
+  private extractParameters(request: Request): Record<string, unknown> {
     return {
-      body: request.body || {},
-      query: request.query || {},
-      params: request.params || {},
+      body: (request.body as Record<string, unknown>) ?? {},
+      query: request.query ?? {},
+      params: request.params ?? {},
     };
   }
 

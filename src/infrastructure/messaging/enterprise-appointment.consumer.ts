@@ -58,7 +58,7 @@ export class EnterpriseAppointmentConsumer {
       }
 
       // Parse message body
-      parsedMessage = JSON.parse(message.Body || '{}') as
+      parsedMessage = JSON.parse(message.Body ?? '{}') as
         | EnterpriseMessage
         | AppointmentMessage;
 
@@ -124,7 +124,7 @@ export class EnterpriseAppointmentConsumer {
     traceId: string,
   ): Promise<void> {
     // Update retry count for monitoring
-    const retryCount = (message.retryCount || 0) + 1;
+    const retryCount = (message.retryCount ?? 0) + 1;
     message.retryCount = retryCount;
 
     this.logger.debug(`Processing enterprise message`, {
@@ -183,7 +183,7 @@ export class EnterpriseAppointmentConsumer {
 
     // Try to parse the message for DLQ handling
     try {
-      const parsedMessage = JSON.parse(message.Body || '{}') as Record<
+      const parsedMessage = JSON.parse(message.Body ?? '{}') as Record<
         string,
         unknown
       >;
@@ -256,15 +256,15 @@ export class EnterpriseAppointmentConsumer {
   // Utility methods
   private extractTraceId(message: Message): string {
     const traceId =
-      message.MessageAttributes?.traceId?.StringValue ||
+      message.MessageAttributes?.traceId?.StringValue ??
       message.MessageAttributes?.TraceId?.StringValue;
-    return traceId || `generated_${message.MessageId}`;
+    return traceId ?? `generated_${message.MessageId}`;
   }
 
   private extractMessageType(message: Message): string {
     return (
-      message.MessageAttributes?.messageType?.StringValue ||
-      message.MessageAttributes?.MessageType?.StringValue ||
+      message.MessageAttributes?.messageType?.StringValue ??
+      message.MessageAttributes?.MessageType?.StringValue ??
       'unknown'
     );
   }

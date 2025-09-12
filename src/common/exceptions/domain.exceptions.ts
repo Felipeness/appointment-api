@@ -130,7 +130,7 @@ export class ValidationError {
   constructor(
     public readonly field: string,
     public readonly message: string,
-    public readonly value?: any,
+    public readonly value?: unknown,
   ) {}
 }
 

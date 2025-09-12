@@ -8,7 +8,6 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
 import { DDoSProtectionMiddleware } from './common/middleware/ddos-protection.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
-import { IdempotencyMiddleware } from './common/middleware/idempotency.middleware';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { EnvConfig } from './infrastructure/config/env.validation';
 
@@ -48,7 +47,7 @@ async function bootstrap() {
   );
 
   // CORS configuration
-  const corsOrigins = corsOrigin?.split(',').map((origin) => origin.trim()) || [
+  const corsOrigins = corsOrigin?.split(',').map((origin) => origin.trim()) ?? [
     'http://localhost:3000',
   ];
 
@@ -75,12 +74,7 @@ async function bootstrap() {
     ),
   );
 
-  // Idempotency middleware
-  app.use(
-    new IdempotencyMiddleware(configService).use.bind(
-      new IdempotencyMiddleware(configService),
-    ),
-  );
+  // Idempotency middleware - disabled for now
 
   // Security middleware
   app.use(new SecurityMiddleware().use.bind(new SecurityMiddleware()));
@@ -107,7 +101,7 @@ async function bootstrap() {
       },
       exceptionFactory: (errors) => {
         const messages = errors.map((error) => {
-          const constraints = Object.values(error.constraints || {});
+          const constraints = Object.values(error.constraints ?? {});
           return `${error.property}: ${constraints.join(', ')}`;
         });
         return new Error(`Validation failed: ${messages.join('; ')}`);
@@ -127,7 +121,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(port || 3000);
+  await app.listen(port ?? 3000);
 
   logger.log(`Application is running on: http://localhost:${port}`);
   logger.log(`Swagger documentation: http://localhost:${port}/api`);

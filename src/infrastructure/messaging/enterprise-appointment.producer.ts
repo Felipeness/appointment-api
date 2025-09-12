@@ -61,7 +61,7 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
               DataType: 'String',
             },
             priority: {
-              StringValue: enterpriseMessage.priority || 'normal',
+              StringValue: enterpriseMessage.priority ?? 'normal',
               DataType: 'String',
             },
             source: {
@@ -69,12 +69,12 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
               DataType: 'String',
             },
             traceId: {
-              StringValue: enterpriseMessage.traceId || 'unknown',
+              StringValue: enterpriseMessage.traceId ?? 'unknown',
               DataType: 'String',
             },
             correlationId: {
               StringValue:
-                enterpriseMessage.correlationId || enterpriseMessage.id,
+                enterpriseMessage.correlationId ?? enterpriseMessage.id,
               DataType: 'String',
             },
             timestamp: {
@@ -128,7 +128,7 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
   }
 
   // Legacy interface methods for backward compatibility
-  async receiveMessages(): Promise<any[]> {
+  async receiveMessages(): Promise<Record<string, unknown>[]> {
     await Promise.resolve(); // Satisfy ESLint require-await rule
     throw new Error('Use consumer service for receiving messages');
   }
@@ -152,10 +152,11 @@ export class EnterpriseAppointmentProducer implements MessageQueue {
       timestamp,
       source: 'appointment-api',
       data,
-      traceId: (options?.traceId as string) || this.generateTraceId(),
-      correlationId: String(data.appointmentId) || messageId,
+      traceId: (options?.traceId as string) ?? this.generateTraceId(),
+      correlationId:
+        typeof data.appointmentId === 'string' ? data.appointmentId : messageId,
       retryCount: 0,
-      priority: (options?.priority as 'high' | 'normal' | 'low') || 'normal',
+      priority: (options?.priority as 'high' | 'normal' | 'low') ?? 'normal',
     };
   }
 
