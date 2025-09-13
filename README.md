@@ -138,13 +138,42 @@ src/
 
 ### 🐳 Via Docker (Recomendado)
 
+#### 🚀 Início Rápido com Scripts Automatizados
+
 ```bash
 # Clone o repositório
 git clone <repository-url>
 cd appointment-api
 
+# 1. Inicie todo o sistema (Docker + Infraestrutura)
+chmod +x start-system.sh
+./start-system.sh
+
+# 2. Execute os testes automatizados (após o sistema iniciar)
+chmod +x test-api.sh
+./test-api.sh
+```
+
+O script `start-system.sh` irá:
+- 🛑 Parar containers existentes
+- 🧹 Limpar volumes órfãos
+- 🏗️ Construir e iniciar PostgreSQL, Redis, LocalStack (AWS SQS)
+- 🚀 Iniciar a aplicação NestJS
+- 📊 Executar migrações e seeds automaticamente
+- ✅ Verificar se todos os serviços estão funcionando
+
+O script `test-api.sh` irá:
+- 🔍 Verificar se a API está disponível
+- 👩‍⚕️ Configurar psicólogos no banco de dados
+- 🧪 Executar 16 testes abrangentes (POST, GET, validações)
+- 📋 Exibir logs e estatísticas do sistema
+- 💎 Mostrar tabela bonita com consultas agendadas
+
+#### 🐳 Método Manual (Docker)
+
+```bash
 # Inicie todos os serviços
-docker-compose up -d
+docker-compose -f docker-compose.complete.yml up --build
 
 # Execute as migrações
 docker-compose exec app bun db:migrate
@@ -197,6 +226,52 @@ bun test:e2e
 
 ## 📡 Endpoints da API
 
+### GET /appointments
+
+Lista consultas com filtros e paginação.
+
+**Query Parameters:**
+- `page` (opcional): Número da página (padrão: 1)
+- `limit` (opcional): Itens por página (máx 100, padrão: 20)
+- `patientId` (opcional): Filtrar por ID do paciente
+- `psychologistId` (opcional): Filtrar por ID do psicólogo
+- `status` (opcional): Filtrar por status (PENDING, CONFIRMED, COMPLETED, CANCELLED)
+- `appointmentType` (opcional): Filtrar por tipo (CONSULTATION, THERAPY_SESSION, EMERGENCY, FOLLOW_UP)
+- `startDate` (opcional): Data inicial (ISO format)
+- `endDate` (opcional): Data final (ISO format)
+- `sortBy` (opcional): Campo para ordenação (scheduledAt, createdAt, updatedAt, status)
+- `sortOrder` (opcional): Ordem (asc, desc)
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "id": "clx123456789",
+      "patientId": "clx987654321",
+      "psychologistId": "clx456789123",
+      "scheduledAt": "2025-01-15T10:00:00.000Z",
+      "duration": 60,
+      "appointmentType": "CONSULTATION",
+      "status": "CONFIRMED",
+      "meetingType": "VIDEO_CALL",
+      "meetingUrl": "https://meet.google.com/abc-def-ghi",
+      "reason": "Initial consultation",
+      "consultationFee": 150.0,
+      "isPaid": false,
+      "createdAt": "2025-01-10T14:30:00.000Z",
+      "updatedAt": "2025-01-10T14:30:00.000Z"
+    }
+  ],
+  "total": 50,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 3,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+}
+```
+
 ### POST /appointments
 
 Cria uma nova solicitação de agendamento.
@@ -219,6 +294,53 @@ Cria uma nova solicitação de agendamento.
   "appointmentId": "clx987654321",
   "status": "queued",
   "message": "Appointment request has been queued for processing"
+}
+```
+
+### POST /appointments/batch
+
+Cria múltiplas solicitações de agendamento em lote.
+
+**Request Body:**
+```json
+{
+  "appointments": [
+    {
+      "patientEmail": "patient1@example.com",
+      "patientName": "John Doe",
+      "psychologistId": "clx123456789",
+      "scheduledAt": "2024-12-25T10:00:00Z"
+    },
+    {
+      "patientEmail": "patient2@example.com",
+      "patientName": "Jane Smith",
+      "psychologistId": "clx123456789",
+      "scheduledAt": "2024-12-26T10:00:00Z"
+    }
+  ]
+}
+```
+
+**Response (202 Accepted):**
+```json
+{
+  "batchId": "batch_1234567890_abc123",
+  "totalRequests": 2,
+  "successful": 1,
+  "failed": 1,
+  "results": [
+    {
+      "appointmentId": "clx987654321",
+      "status": "queued",
+      "traceId": "trace_123"
+    },
+    {
+      "appointmentId": "clx876543210",
+      "status": "failed",
+      "traceId": "trace_124"
+    }
+  ],
+  "message": "Batch processed: 1 queued, 1 failed"
 }
 ```
 

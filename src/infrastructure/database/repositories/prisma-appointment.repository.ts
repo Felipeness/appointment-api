@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { AppointmentRepository } from '../../../domain/repositories/appointment.repository';
+import {
+  AppointmentRepository,
+  ListAppointmentsFilters,
+  PaginationOptions,
+  PaginatedResult,
+} from '../../../domain/repositories/appointment.repository';
 import { Appointment } from '../../../domain/entities/appointment.entity';
 import {
   AppointmentStatus,
@@ -84,6 +89,69 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
     });
 
     return appointments.map((appointment) => this.toDomain(appointment));
+  }
+
+  async findManyWithPagination(
+    filters?: ListAppointmentsFilters,
+    pagination?: PaginationOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const page = pagination?.page ?? 1;
+    const limit = pagination?.limit ?? 20;
+    const skip = (page - 1) * limit;
+    const sortBy = pagination?.sortBy ?? 'scheduledAt';
+    const sortOrder = pagination?.sortOrder ?? 'desc';
+
+    // Build where clause
+    const where: any = {};
+    
+    if (filters?.patientId) {
+      where.patientId = filters.patientId;
+    }
+    
+    if (filters?.psychologistId) {
+      where.psychologistId = filters.psychologistId;
+    }
+    
+    if (filters?.status) {
+      where.status = filters.status as PrismaAppointmentStatus;
+    }
+    
+    if (filters?.appointmentType) {
+      where.appointmentType = filters.appointmentType as PrismaAppointmentType;
+    }
+    
+    if (filters?.startDate || filters?.endDate) {
+      where.scheduledAt = {};
+      if (filters.startDate) {
+        where.scheduledAt.gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        where.scheduledAt.lte = filters.endDate;
+      }
+    }
+
+    // Execute queries in parallel
+    const [appointments, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    const domainAppointments = appointments.map((appointment) =>
+      this.toDomain(appointment),
+    );
+
+    return {
+      data: domainAppointments,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async save(appointment: Appointment): Promise<Appointment> {

@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
   HttpCode,
@@ -20,7 +21,11 @@ import {
 } from '@nestjs/swagger';
 
 import { EnterpriseScheduleAppointmentUseCase } from '../../application/use-cases/enterprise-schedule-appointment.use-case';
+import { ListAppointmentsUseCase } from '../../application/use-cases/list-appointments.use-case';
 import { CreateAppointmentDto } from '../../application/dtos/create-appointment.dto';
+import { ListAppointmentsQueryDto } from '../../application/dtos/list-appointments-query.dto';
+import { AppointmentResponseDto } from '../../application/dtos/appointment-response.dto';
+import { PaginatedResponseDto } from '../../application/dtos/paginated-response.dto';
 import { Idempotent } from '../../common/decorators/idempotency.decorator';
 import { IdempotencyInterceptor } from '../../common/interceptors/idempotency.interceptor';
 import {
@@ -35,7 +40,119 @@ export class AppointmentsController {
 
   constructor(
     private readonly enterpriseScheduleUseCase: EnterpriseScheduleAppointmentUseCase,
+    private readonly listAppointmentsUseCase: ListAppointmentsUseCase,
   ) {}
+
+  @Get()
+  @UseGuards(RateLimitGuard)
+  @RateLimit({ points: 30, duration: 60 }) // 30 requests per minute for listing
+  @ApiOperation({
+    summary: 'List appointments',
+    description:
+      'Retrieve a paginated list of appointments with optional filtering by patient, psychologist, status, type, and date range.',
+  })
+  @ApiQuery({
+    name: 'page',
+    description: 'Page number (starts at 1)',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    description: 'Number of items per page (max 100)',
+    required: false,
+    type: Number,
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'patientId',
+    description: 'Filter by patient ID',
+    required: false,
+    type: String,
+  })
+  @ApiQuery({
+    name: 'psychologistId',
+    description: 'Filter by psychologist ID',
+    required: false,
+    type: String,
+  })
+  @ApiQuery({
+    name: 'status',
+    description: 'Filter by appointment status',
+    required: false,
+    enum: ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'],
+  })
+  @ApiQuery({
+    name: 'appointmentType',
+    description: 'Filter by appointment type',
+    required: false,
+    enum: ['CONSULTATION', 'THERAPY_SESSION', 'EMERGENCY', 'FOLLOW_UP'],
+  })
+  @ApiQuery({
+    name: 'startDate',
+    description: 'Filter appointments from this date (ISO format)',
+    required: false,
+    type: String,
+    example: '2025-01-01T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    description: 'Filter appointments until this date (ISO format)',
+    required: false,
+    type: String,
+    example: '2025-12-31T23:59:59.999Z',
+  })
+  @ApiQuery({
+    name: 'sortBy',
+    description: 'Field to sort by',
+    required: false,
+    enum: ['scheduledAt', 'createdAt', 'updatedAt', 'status'],
+    example: 'scheduledAt',
+  })
+  @ApiQuery({
+    name: 'sortOrder',
+    description: 'Sort order',
+    required: false,
+    enum: ['asc', 'desc'],
+    example: 'desc',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Appointments retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/AppointmentResponseDto' },
+        },
+        total: { type: 'number', example: 100 },
+        page: { type: 'number', example: 1 },
+        limit: { type: 'number', example: 20 },
+        totalPages: { type: 'number', example: 5 },
+        hasPreviousPage: { type: 'boolean', example: false },
+        hasNextPage: { type: 'boolean', example: true },
+      },
+    },
+  })
+  async listAppointments(
+    @Query() query: ListAppointmentsQueryDto,
+  ): Promise<PaginatedResponseDto<AppointmentResponseDto>> {
+    this.logger.log('Listing appointments', {
+      page: query.page,
+      limit: query.limit,
+      filters: {
+        patientId: query.patientId,
+        psychologistId: query.psychologistId,
+        status: query.status,
+        appointmentType: query.appointmentType,
+        dateRange: query.startDate && query.endDate ? `${query.startDate} - ${query.endDate}` : undefined,
+      },
+    });
+
+    return await this.listAppointmentsUseCase.execute(query);
+  }
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)

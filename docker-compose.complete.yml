@@ -1,0 +1,117 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: appointment-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appointment_test_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - appointment-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: appointment-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - appointment-network
+
+  # LocalStack (AWS Services Local)
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: appointment-localstack
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - DEBUG=1
+      - SERVICES=sqs,s3,lambda,dynamodb
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - PERSISTENCE=0
+    volumes:
+      - localstack_data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - appointment-network
+
+  # Appointment API Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: appointment-api
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/appointment_test_db?schema=public
+      - SQS_APPOINTMENT_QUEUE_URL=http://localstack:4566/000000000000/appointment-queue
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=us-east-1
+      - REDIS_URL=redis://redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - appointment-network
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Aguardando serviços...' &&
+        sleep 10 &&
+        echo 'Aplicando migrações...' &&
+        bun prisma migrate deploy &&
+        echo 'Executando seed...' &&
+        bun prisma db seed &&
+        echo 'Criando fila SQS...' &&
+        aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name appointment-queue --region us-east-1 &&
+        echo 'Iniciando aplicação...' &&
+        bun run start:dev
+      "
+
+networks:
+  appointment-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  localstack_data:
