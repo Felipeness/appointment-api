@@ -7,7 +7,7 @@ import { IdempotencyModule } from './common/modules/idempotency.module';
 import { SecurityModule } from './common/modules/security.module';
 import { TransactionalOutboxService } from './infrastructure/database/outbox/transactional-outbox.service';
 import { PrismaService } from './infrastructure/database/prisma.service';
-import { EnterpriseAppointmentProducer } from './infrastructure/messaging/enterprise-appointment.producer';
+import { AwsSqsProducer } from './infrastructure/messaging/aws-sqs.producer';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -30,7 +30,7 @@ import { AppService } from './app.service';
     AppService,
     TransactionalOutboxService,
     PrismaService,
-    EnterpriseAppointmentProducer,
+    AwsSqsProducer,
   ],
 })
 export class AppModule {}

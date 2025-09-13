@@ -5,7 +5,7 @@ import { ResilientPrismaService } from './infrastructure/database/resilient-pris
 
 // Enterprise SQS implementation
 import { EnterpriseSqsModule } from './infrastructure/messaging/enterprise-sqs.module';
-import { EnterpriseAppointmentProducer } from './infrastructure/messaging/enterprise-appointment.producer';
+import { AwsSqsProducer } from './infrastructure/messaging/aws-sqs.producer';
 import { EnterpriseAppointmentConsumer } from './infrastructure/messaging/enterprise-appointment.consumer';
 
 // Resilience components
@@ -19,6 +19,7 @@ import { PrismaPatientRepository } from './infrastructure/database/repositories/
 import { PrismaAppointmentRepository } from './infrastructure/database/repositories/prisma-appointment.repository';
 
 import { EnterpriseScheduleAppointmentUseCase } from './application/use-cases/enterprise-schedule-appointment.use-case';
+import { ListAppointmentsUseCase } from './application/use-cases/list-appointments.use-case';
 import { ProcessAppointmentUseCase } from './application/use-cases/process-appointment.use-case';
 import { ResilientProcessAppointmentUseCase } from './application/use-cases/resilient-process-appointment.use-case';
 
@@ -44,11 +45,11 @@ import { INJECTION_TOKENS } from './shared/constants/injection-tokens';
     // Enterprise SQS as the primary message queue service
     {
       provide: INJECTION_TOKENS.MESSAGE_QUEUE,
-      useClass: EnterpriseAppointmentProducer,
+      useClass: AwsSqsProducer,
     },
     {
       provide: INJECTION_TOKENS.ENTERPRISE_MESSAGE_QUEUE,
-      useClass: EnterpriseAppointmentProducer,
+      useClass: AwsSqsProducer,
     },
 
     // Resilience components
@@ -73,11 +74,12 @@ import { INJECTION_TOKENS } from './shared/constants/injection-tokens';
 
     // Use case implementations
     EnterpriseScheduleAppointmentUseCase,
+    ListAppointmentsUseCase,
     ProcessAppointmentUseCase,
     ResilientProcessAppointmentUseCase,
 
-    // SQS Consumer and its dependencies
-    EnterpriseAppointmentConsumer,
+    // SQS Consumer and its dependencies (temporarily disabled while testing new producer)
+    // EnterpriseAppointmentConsumer,
     SQSIdempotencyService,
   ],
   controllers: [AppointmentsController],
