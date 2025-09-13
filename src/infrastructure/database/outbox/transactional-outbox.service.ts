@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
-import { EnterpriseAppointmentProducer } from '../../messaging/enterprise-appointment.producer';
+import { AwsSqsProducer } from '../../messaging/aws-sqs.producer';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 export interface OutboxEvent {
@@ -34,7 +34,7 @@ export class TransactionalOutboxService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly messageProducer: EnterpriseAppointmentProducer,
+    private readonly messageProducer: AwsSqsProducer,
   ) {}
 
   /**

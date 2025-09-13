@@ -108,22 +108,28 @@ async function main() {
   });
 
   // Create specializations
-  const specialization1 = await prisma.specialization.create({
-    data: {
+  const specialization1 = await prisma.specialization.upsert({
+    where: { name: 'Terapia Cognitivo-Comportamental' },
+    update: {},
+    create: {
       name: 'Terapia Cognitivo-Comportamental',
       description: 'Abordagem terapêutica focada na modificação de padrões de pensamento e comportamento.',
     },
   });
 
-  const specialization2 = await prisma.specialization.create({
-    data: {
+  const specialization2 = await prisma.specialization.upsert({
+    where: { name: 'Terapia Familiar' },
+    update: {},
+    create: {
       name: 'Terapia Familiar',
       description: 'Terapia voltada para conflitos e dinâmicas familiares.',
     },
   });
 
-  const specialization3 = await prisma.specialization.create({
-    data: {
+  const specialization3 = await prisma.specialization.upsert({
+    where: { name: 'Transtornos de Ansiedade' },
+    update: {},
+    create: {
       name: 'Transtornos de Ansiedade',
       description: 'Especialização no tratamento de diversos tipos de ansiedade.',
     },
@@ -137,41 +143,61 @@ async function main() {
       { psychologistId: psychologist2.id, specializationId: specialization2.id },
       { psychologistId: psychologist3.id, specializationId: specialization3.id },
     ],
+    skipDuplicates: true,
   });
 
   // Create medical history records
-  await prisma.medicalHistory.create({
-    data: {
+  const existingMedHistory = await prisma.medicalHistory.findFirst({
+    where: {
       patientId: patient1.id,
       condition: 'Transtorno de Ansiedade Generalizada',
-      diagnosis: 'TAG - Diagnóstico confirmado através de avaliação clínica',
-      treatment: 'Terapia cognitivo-comportamental por 6 meses. Melhora significativa dos sintomas.',
-      medications: 'Sertralina 50mg - 1x ao dia',
-      allergies: 'Nenhuma alergia conhecida',
     },
   });
+
+  if (!existingMedHistory) {
+    await prisma.medicalHistory.create({
+      data: {
+        patientId: patient1.id,
+        condition: 'Transtorno de Ansiedade Generalizada',
+        diagnosis: 'TAG - Diagnóstico confirmado através de avaliação clínica',
+        treatment: 'Terapia cognitivo-comportamental por 6 meses. Melhora significativa dos sintomas.',
+        medications: 'Sertralina 50mg - 1x ao dia',
+        allergies: 'Nenhuma alergia conhecida',
+      },
+    });
+  }
 
   // Create sample appointments
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 7); // 7 days from now
   futureDate.setHours(10, 0, 0, 0);
 
-  await prisma.appointment.create({
-    data: {
+  const existingAppointment = await prisma.appointment.findFirst({
+    where: {
       patientId: patient1.id,
       psychologistId: psychologist1.id,
       scheduledAt: futureDate,
-      duration: 60,
-      appointmentType: AppointmentType.THERAPY_SESSION,
-      status: AppointmentStatus.CONFIRMED,
-      meetingType: MeetingType.IN_PERSON,
-      meetingRoom: 'Sala 301',
-      reason: 'Sessão de acompanhamento - TAG',
-      consultationFee: 150.00,
-      isPaid: false,
-      confirmedAt: new Date(),
     },
   });
+
+  if (!existingAppointment) {
+    await prisma.appointment.create({
+      data: {
+        patientId: patient1.id,
+        psychologistId: psychologist1.id,
+        scheduledAt: futureDate,
+        duration: 60,
+        appointmentType: AppointmentType.THERAPY_SESSION,
+        status: AppointmentStatus.CONFIRMED,
+        meetingType: MeetingType.IN_PERSON,
+        meetingRoom: 'Sala 301',
+        reason: 'Sessão de acompanhamento - TAG',
+        consultationFee: 150.00,
+        isPaid: false,
+        confirmedAt: new Date(),
+      },
+    });
+  }
 
   console.log('✅ Seed data created successfully');
   console.log('👩‍⚕️ Created psychologists:', {

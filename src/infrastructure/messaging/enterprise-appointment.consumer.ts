@@ -3,7 +3,7 @@ import { SqsMessageHandler, SqsConsumerEventHandler } from '@ssut/nestjs-sqs';
 import type { Message } from '@aws-sdk/client-sqs';
 import { ResilientProcessAppointmentUseCase } from '../../application/use-cases/resilient-process-appointment.use-case';
 import { DeadLetterQueueHandler } from '../../common/resilience/dlq-handler';
-import { EnterpriseMessage } from './enterprise-appointment.producer';
+import { EnterpriseMessage } from './aws-sqs.producer';
 import {
   ProcessAppointmentUseCase,
   AppointmentMessage,

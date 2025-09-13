@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { CreateAppointmentDto } from '../dtos/create-appointment.dto';
-import { EnterpriseAppointmentProducer } from '../../infrastructure/messaging/enterprise-appointment.producer';
+import { AwsSqsProducer } from '../../infrastructure/messaging/aws-sqs.producer';
 import type { PsychologistRepository } from '../../domain/repositories/psychologist.repository';
 import { INJECTION_TOKENS } from '../../shared/constants/injection-tokens';
 import { PsychologistNotFoundException } from '../../common/exceptions/domain.exceptions';
@@ -25,7 +25,7 @@ export class EnterpriseScheduleAppointmentUseCase {
 
   constructor(
     @Inject(INJECTION_TOKENS.ENTERPRISE_MESSAGE_QUEUE)
-    private readonly enterpriseQueue: EnterpriseAppointmentProducer,
+    private readonly enterpriseQueue: AwsSqsProducer,
     @Inject(INJECTION_TOKENS.PSYCHOLOGIST_REPOSITORY)
     private readonly psychologistRepository: PsychologistRepository,
   ) {}
@@ -76,8 +76,6 @@ export class EnterpriseScheduleAppointmentUseCase {
       await this.enterpriseQueue.sendMessage(appointmentMessage, {
         priority,
         traceId,
-        messageGroupId: this.getMessageGroupId(dto),
-        deduplicationId: this.getDeduplicationId(appointmentId, dto),
         delaySeconds: this.calculateDelaySeconds(priority),
       });
 
