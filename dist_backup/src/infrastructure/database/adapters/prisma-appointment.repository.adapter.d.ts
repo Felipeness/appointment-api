@@ -1,0 +1,27 @@
+import { AppointmentRepositoryPort } from '../../../application/ports/appointment.repository.port';
+import { Appointment } from '../../../domain/aggregates/appointment.aggregate';
+import { AppointmentId } from '../../../domain/value-objects/appointment-id.vo';
+import { PatientId } from '../../../domain/value-objects/patient-id.vo';
+import { PsychologistId } from '../../../domain/value-objects/psychologist-id.vo';
+import { AppointmentStatus } from '../../../domain/entities/enums';
+import { PrismaService } from '../prisma.service';
+export declare class PrismaAppointmentRepositoryAdapter implements AppointmentRepositoryPort {
+    private readonly prisma;
+    constructor(prisma: PrismaService);
+    save(appointment: Appointment): Promise<void>;
+    findById(id: AppointmentId): Promise<Appointment | null>;
+    findByPatientId(patientId: PatientId): Promise<Appointment[]>;
+    findByPsychologistId(psychologistId: PsychologistId): Promise<Appointment[]>;
+    findByStatus(status: AppointmentStatus): Promise<Appointment[]>;
+    findConflictingAppointments(psychologistId: PsychologistId, scheduledAt: Date, duration: number, excludeAppointmentId?: AppointmentId): Promise<Appointment[]>;
+    findUpcomingAppointments(limit?: number): Promise<Appointment[]>;
+    delete(id: AppointmentId): Promise<void>;
+    private toDomain;
+    private toPersistence;
+    private statusFromPrisma;
+    private statusToPrisma;
+    private appointmentTypeFromPrisma;
+    private appointmentTypeToPrisma;
+    private meetingTypeFromPrisma;
+    private meetingTypeToPrisma;
+}

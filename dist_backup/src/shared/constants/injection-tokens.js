@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.INJECTION_TOKENS = void 0;
+exports.INJECTION_TOKENS = {
+    APPOINTMENT_REPOSITORY: 'APPOINTMENT_REPOSITORY',
+    PATIENT_REPOSITORY: 'PATIENT_REPOSITORY',
+    PSYCHOLOGIST_REPOSITORY: 'PSYCHOLOGIST_REPOSITORY',
+    MESSAGE_QUEUE: 'MESSAGE_QUEUE',
+    ENTERPRISE_MESSAGE_QUEUE: 'ENTERPRISE_MESSAGE_QUEUE',
+};
+//# sourceMappingURL=injection-tokens.js.map

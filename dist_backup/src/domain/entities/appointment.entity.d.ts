@@ -1,0 +1,37 @@
+import { AppointmentStatus, AppointmentType, MeetingType } from './enums';
+export declare class Appointment {
+    readonly id: string;
+    readonly patientId: string;
+    readonly psychologistId: string;
+    readonly scheduledAt: Date;
+    readonly duration: number;
+    readonly appointmentType: AppointmentType;
+    readonly status: AppointmentStatus;
+    readonly meetingType: MeetingType;
+    readonly meetingUrl?: string | undefined;
+    readonly meetingRoom?: string | undefined;
+    readonly reason?: string | undefined;
+    readonly notes?: string | undefined;
+    readonly privateNotes?: string | undefined;
+    readonly consultationFee?: number | undefined;
+    readonly isPaid: boolean;
+    readonly cancelledAt?: Date | undefined;
+    readonly cancelledBy?: string | undefined;
+    readonly cancellationReason?: string | undefined;
+    readonly createdAt: Date;
+    readonly updatedAt: Date;
+    readonly confirmedAt?: Date | undefined;
+    readonly completedAt?: Date | undefined;
+    constructor(id: string, patientId: string, psychologistId: string, scheduledAt: Date, duration?: number, appointmentType?: AppointmentType, status?: AppointmentStatus, meetingType?: MeetingType, meetingUrl?: string | undefined, meetingRoom?: string | undefined, reason?: string | undefined, notes?: string | undefined, privateNotes?: string | undefined, consultationFee?: number | undefined, isPaid?: boolean, cancelledAt?: Date | undefined, cancelledBy?: string | undefined, cancellationReason?: string | undefined, createdAt?: Date, updatedAt?: Date, confirmedAt?: Date | undefined, completedAt?: Date | undefined);
+    private validate;
+    isScheduledWithin24Hours(): boolean;
+    isPast(): boolean;
+    canBeConfirmed(): boolean;
+    canBeDeclined(): boolean;
+    canBeCancelled(): boolean;
+    canBeCompleted(): boolean;
+    confirm(notes?: string): Appointment;
+    decline(notes?: string): Appointment;
+    cancel(cancelledBy: string, reason?: string): Appointment;
+    complete(notes?: string): Appointment;
+}
