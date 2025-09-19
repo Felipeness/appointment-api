@@ -11,12 +11,14 @@ export interface OutboxEvent {
   version?: number;
 }
 
+import type { JsonValue } from '@prisma/client/runtime/library';
+
 export interface OutboxEventRecord {
   id: string;
   aggregateId: string;
   aggregateType: string;
   eventType: string;
-  eventData: any;
+  eventData: JsonValue;
   status: string;
   version: number;
   retryCount: number;
@@ -41,16 +43,16 @@ export class TransactionalOutboxService {
    * Store event in outbox within a transaction
    */
   async storeEvent(event: OutboxEvent, tx?: typeof this.prisma): Promise<void> {
-    const prismaClient = tx || this.prisma;
+    const prismaClient = tx ?? this.prisma;
 
     await prismaClient.outboxEvent.create({
       data: {
         aggregateId: event.aggregateId,
         aggregateType: event.aggregateType,
         eventType: event.eventType,
-        eventData: event.eventData as any,
+        eventData: JSON.stringify(event.eventData),
         status: 'PENDING',
-        version: event.version || 1,
+        version: event.version ?? 1,
       },
     });
 
@@ -66,16 +68,16 @@ export class TransactionalOutboxService {
     events: OutboxEvent[],
     tx?: typeof this.prisma,
   ): Promise<void> {
-    const prismaClient = tx || this.prisma;
+    const prismaClient = tx ?? this.prisma;
 
     await prismaClient.outboxEvent.createMany({
       data: events.map((event) => ({
         aggregateId: event.aggregateId,
         aggregateType: event.aggregateType,
         eventType: event.eventType,
-        eventData: event.eventData as any,
+        eventData: JSON.stringify(event.eventData),
         status: 'PENDING',
-        version: event.version || 1,
+        version: event.version ?? 1,
       })),
     });
 
@@ -114,7 +116,7 @@ export class TransactionalOutboxService {
   /**
    * Process a single outbox event
    */
-  private async processEvent(event: any): Promise<void> {
+  private async processEvent(event: OutboxEventRecord): Promise<void> {
     try {
       // Mark as processing
       await this.prisma.outboxEvent.update({
@@ -126,8 +128,12 @@ export class TransactionalOutboxService {
       });
 
       // Publish to message queue
+      const messageData = typeof event.eventData === 'object' && event.eventData !== null
+        ? { ...(event.eventData as Record<string, unknown>) }
+        : {};
+
       await this.messageProducer.sendMessage({
-        ...event.eventData,
+        ...messageData,
         eventType: event.eventType,
         aggregateId: event.aggregateId,
         version: event.version,

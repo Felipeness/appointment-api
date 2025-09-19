@@ -1,4 +1,4 @@
-import { Patient } from '../entities/patient.entity';
+import type { Patient } from '../entities/patient.entity';
 
 export interface PatientRepository {
   findById(id: string): Promise<Patient | null>;

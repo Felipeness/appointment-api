@@ -1,5 +1,5 @@
-import { Appointment } from '../entities/appointment.entity';
-import { AppointmentStatus, AppointmentType } from '../entities/enums';
+import type { Appointment } from '../entities/appointment.entity';
+import type { AppointmentStatus, AppointmentType } from '../entities/enums';
 
 export interface ListAppointmentsFilters {
   patientId?: string;

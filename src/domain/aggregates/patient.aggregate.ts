@@ -6,17 +6,35 @@ import { DateService } from '../services/date.service';
 import { Gender } from '../entities/enums';
 
 const PatientPropsSchema = z.object({
-  id: z.any(), // Temporarily any for compatibility
-  email: z.any(), // Temporarily any for compatibility
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
-  phone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone format').optional(),
-  dateOfBirth: z.date().max(new Date(), 'Date of birth cannot be in the future').optional(),
+  id: z.instanceof(PatientId),
+  email: z.instanceof(Email),
+  name: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name is too long'),
+  phone: z
+    .string()
+    .regex(/^\+?[\d\s\-()]+$/, 'Invalid phone format')
+    .optional(),
+  dateOfBirth: z
+    .date()
+    .max(new Date(), 'Date of birth cannot be in the future')
+    .optional(),
   gender: z.nativeEnum(Gender).optional(),
   address: z.string().max(500, 'Address is too long').optional(),
-  emergencyContact: z.string().max(100, 'Emergency contact name is too long').optional(),
-  emergencyPhone: z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid emergency phone format').optional(),
+  emergencyContact: z
+    .string()
+    .max(100, 'Emergency contact name is too long')
+    .optional(),
+  emergencyPhone: z
+    .string()
+    .regex(/^\+?[\d\s\-()]+$/, 'Invalid emergency phone format')
+    .optional(),
   medicalNotes: z.string().max(1000, 'Medical notes are too long').optional(),
-  preferredLanguage: z.string().max(50, 'Preferred language is too long').optional(),
+  preferredLanguage: z
+    .string()
+    .max(50, 'Preferred language is too long')
+    .optional(),
   isActive: z.boolean().default(true),
   createdAt: z.date().default(() => new Date()),
   updatedAt: z.date().default(() => new Date()),
@@ -27,10 +45,12 @@ export type PatientProps = z.infer<typeof PatientPropsSchema>;
 
 export class Patient extends AggregateRoot<PatientProps> {
   private constructor(props: PatientProps, version?: number) {
-    super(props, props.id.toString(), version);
+    super(props, (props.id as { toString(): string }).toString(), version);
   }
 
-  public static create(props: Omit<PatientProps, 'id' | 'createdAt' | 'updatedAt'>): Patient {
+  public static create(
+    props: Omit<PatientProps, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Patient {
     const patientProps: PatientProps = {
       ...props,
       id: PatientId.create(),
@@ -82,23 +102,27 @@ export class Patient extends AggregateRoot<PatientProps> {
     this.props.updatedAt = DateService.now();
   }
 
-  public updateContactInfo(email?: Email, phone?: string, address?: string): void {
+  public updateContactInfo(
+    email?: Email,
+    phone?: string,
+    address?: string,
+  ): void {
     if (email) {
       this.props.email = email;
     }
-    
+
     if (phone !== undefined) {
       if (phone && !PatientPropsSchema.shape.phone.safeParse(phone).success) {
         throw new Error('Invalid phone format');
       }
-      this.props.phone = phone || undefined;
+      this.props.phone = phone ?? undefined;
     }
-    
+
     if (address !== undefined) {
       if (address && address.length > 500) {
         throw new Error('Address is too long');
       }
-      this.props.address = address || undefined;
+      this.props.address = address ?? undefined;
     }
 
     this.props.updatedAt = DateService.now();
@@ -116,32 +140,36 @@ export class Patient extends AggregateRoot<PatientProps> {
       if (dateOfBirth && dateOfBirth > new Date()) {
         throw new Error('Date of birth cannot be in the future');
       }
-      this.props.dateOfBirth = dateOfBirth || undefined;
+      this.props.dateOfBirth = dateOfBirth ?? undefined;
     }
 
     if (gender !== undefined) {
-      this.props.gender = gender || undefined;
+      this.props.gender = gender ?? undefined;
     }
 
     if (emergencyContact !== undefined) {
       if (emergencyContact && emergencyContact.length > 100) {
         throw new Error('Emergency contact name is too long');
       }
-      this.props.emergencyContact = emergencyContact || undefined;
+      this.props.emergencyContact = emergencyContact ?? undefined;
     }
 
     if (emergencyPhone !== undefined) {
-      if (emergencyPhone && !PatientPropsSchema.shape.emergencyPhone.safeParse(emergencyPhone).success) {
+      if (
+        emergencyPhone &&
+        !PatientPropsSchema.shape.emergencyPhone.safeParse(emergencyPhone)
+          .success
+      ) {
         throw new Error('Invalid emergency phone format');
       }
-      this.props.emergencyPhone = emergencyPhone || undefined;
+      this.props.emergencyPhone = emergencyPhone ?? undefined;
     }
 
     if (medicalNotes !== undefined) {
       if (medicalNotes && medicalNotes.length > 1000) {
         throw new Error('Medical notes are too long');
       }
-      this.props.medicalNotes = medicalNotes || undefined;
+      this.props.medicalNotes = medicalNotes ?? undefined;
     }
 
     this.props.updatedAt = DateService.now();
@@ -158,7 +186,10 @@ export class Patient extends AggregateRoot<PatientProps> {
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
 
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    if (
+      monthDiff < 0 ||
+      (monthDiff === 0 && today.getDate() < birthDate.getDate())
+    ) {
       age--;
     }
 

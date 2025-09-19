@@ -70,7 +70,7 @@ export class SecurityMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction): void {
     // Apply Helmet security headers
-    this.helmetMiddleware(req, res, (err?: any) => {
+    this.helmetMiddleware(req, res, (err?: unknown) => {
       if (err) {
         this.logger.error('Helmet middleware error', err);
         return next(err);
@@ -91,7 +91,7 @@ export class SecurityMiddleware implements NestMiddleware {
     res.setHeader('X-API-Version', '1.0');
     res.setHeader(
       'X-Request-ID',
-      req.headers['x-request-id'] || this.generateRequestId(),
+      req.headers['x-request-id'] ?? this.generateRequestId(),
     );
 
     // Cache control for sensitive endpoints
@@ -102,7 +102,7 @@ export class SecurityMiddleware implements NestMiddleware {
     }
 
     // CORS headers (if needed)
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [];
     const origin = req.headers.origin;
 
     if (origin && allowedOrigins.includes(origin)) {
@@ -143,7 +143,7 @@ export class SecurityMiddleware implements NestMiddleware {
 
     // Check for common attack patterns
     const path = req.path.toLowerCase();
-    const userAgent = (req.headers['user-agent'] || '').toLowerCase();
+    const userAgent = (req.headers['user-agent'] ?? '').toLowerCase();
     const query = JSON.stringify(req.query).toLowerCase();
 
     // SQL Injection patterns
@@ -250,7 +250,7 @@ export class SecurityMiddleware implements NestMiddleware {
     }
 
     // Large payload size
-    const contentLength = parseInt(req.headers['content-length'] || '0');
+    const contentLength = parseInt(req.headers['content-length'] ?? '0');
     if (contentLength > 10 * 1024 * 1024) {
       // 10MB
       indicators.push('large_payload');
@@ -282,11 +282,11 @@ export class SecurityMiddleware implements NestMiddleware {
 
   private getClientIP(req: Request): string {
     return (
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      (req.headers['x-real-ip'] as string) ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
-      req.ip ||
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ??
+      (req.headers['x-real-ip'] as string) ??
+      req.connection.remoteAddress ??
+      req.socket.remoteAddress ??
+      req.ip ??
       'unknown'
     );
   }

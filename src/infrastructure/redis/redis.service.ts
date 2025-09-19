@@ -1,4 +1,10 @@
-import { Injectable, Inject, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { REDIS_CLIENT } from './redis-core.module';
 
@@ -65,10 +71,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   // JSON operations
   async getObject<T>(key: string): Promise<T | null> {
     const value = await this.get(key);
-    return value ? JSON.parse(value) : null;
+    return value ? (JSON.parse(value) as T) : null;
   }
 
-  async setObject<T>(key: string, value: T, ttlSeconds?: number): Promise<'OK'> {
+  async setObject<T>(
+    key: string,
+    value: T,
+    ttlSeconds?: number,
+  ): Promise<'OK'> {
     return this.set(key, JSON.stringify(value), ttlSeconds);
   }
 

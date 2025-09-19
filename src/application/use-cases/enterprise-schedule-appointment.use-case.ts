@@ -159,7 +159,7 @@ export class EnterpriseScheduleAppointmentUseCase {
     // VIP patients or urgent appointments get high priority
     if (
       dto.appointmentType === AppointmentType.EMERGENCY ||
-      dto.reason?.toLowerCase().includes('urgent')
+      dto.reason?.toLowerCase().includes('urgent') === true
     ) {
       return 'high';
     }
@@ -276,7 +276,10 @@ export class EnterpriseScheduleAppointmentUseCase {
             traceId,
             appointmentIndex: i + index,
             error:
-              result && typeof result === 'object' && 'reason' in result
+              result !== null &&
+              result !== undefined &&
+              typeof result === 'object' &&
+              'reason' in result
                 ? (result as { reason: unknown }).reason
                 : 'Unknown error',
           });

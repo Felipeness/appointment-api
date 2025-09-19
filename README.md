@@ -154,6 +154,28 @@ chmod +x test-api.sh
 ./test-api.sh
 ```
 
+#### 🎯 Scripts de Demonstração Enterprise
+
+Para demonstrações técnicas e apresentações:
+
+```bash
+# Script de demonstração interativa (28 etapas)
+# Mostra Clean Architecture, DDD, EDA, CQRS, Saga Pattern
+chmod +x demo-presentation.sh
+./demo-presentation.sh
+
+# Monitor em tempo real (execute em terminal separado)
+# 7 modos: API logs, performance, eventos EDA
+chmod +x monitor-demo.sh
+./monitor-demo.sh
+```
+
+**Scripts disponíveis:**
+- 📋 `demo-commands.md` - Comandos organizados por seção arquitetural
+- 🎬 `demo-presentation.sh` - Demonstração interativa completa (259 linhas)
+- 🔍 `monitor-demo.sh` - Monitor de sistema em tempo real (136 linhas)
+- 📖 `README-PRESENTATION.md` - Guia completo de apresentação
+
 O script `start-system.sh` irá:
 - 🛑 Parar containers existentes
 - 🧹 Limpar volumes órfãos

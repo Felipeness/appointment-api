@@ -58,7 +58,11 @@ export class ResilientProcessAppointmentUseCase {
         { originalMessage: message, attemptCount },
       );
 
-      if (sagaExecution.error) {
+      if (
+        sagaExecution.error !== undefined &&
+        sagaExecution.error !== null &&
+        sagaExecution.error !== ''
+      ) {
         throw new Error(`Saga failed: ${sagaExecution.error}`);
       }
 
@@ -88,8 +92,7 @@ export class ResilientProcessAppointmentUseCase {
         action: async () => {
           return await this.validateOrCreatePatient(message);
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
-        compensation: async () => {
+        compensation: () => {
           // If patient was created, we might want to mark it as inactive
           // For existing patients, no compensation needed
           this.logger.log('Compensating patient validation - no action needed');
@@ -103,8 +106,7 @@ export class ResilientProcessAppointmentUseCase {
         action: async () => {
           return await this.validatePsychologist(message.psychologistId);
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
-        compensation: async () => {
+        compensation: () => {
           // No compensation needed for validation
           this.logger.log(
             'Compensating psychologist validation - no action needed',
@@ -119,8 +121,7 @@ export class ResilientProcessAppointmentUseCase {
         action: async () => {
           return await this.checkAvailability(message);
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
-        compensation: async () => {
+        compensation: () => {
           // No compensation needed for availability check
           this.logger.log('Compensating availability check - no action needed');
         },
@@ -133,8 +134,7 @@ export class ResilientProcessAppointmentUseCase {
         action: async () => {
           return await this.saveAppointmentWithOutbox(message);
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
-        compensation: async () => {
+        compensation: () => {
           // Delete the appointment if it was saved
           this.deleteAppointment(message.appointmentId);
         },
@@ -214,7 +214,11 @@ export class ResilientProcessAppointmentUseCase {
     const psychologist = await this.psychologistRepository.findById(
       message.psychologistId,
     );
-    if (!psychologist?.isAvailableAt(scheduledDate)) {
+    if (
+      psychologist === null ||
+      psychologist === undefined ||
+      psychologist.isAvailableAt(scheduledDate) === false
+    ) {
       throw new Error('Psychologist not available at requested time');
     }
 

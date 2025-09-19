@@ -1,4 +1,4 @@
-import { WorkingHours } from '../value-objects/working-hours.vo';
+import type { WorkingHours } from '../value-objects/working-hours.vo';
 
 export class Psychologist {
   constructor(
@@ -129,15 +129,15 @@ export class Psychologist {
     return new Psychologist(
       this.id,
       this.email,
-      name || this.name,
+      name ?? this.name,
       this.workingHours,
-      phone !== undefined ? phone : this.phone,
+      phone ?? this.phone,
       this.registrationId,
-      biography !== undefined ? biography : this.biography,
+      biography ?? this.biography,
       this.consultationFeeMin,
       this.consultationFeeMax,
       this.yearsExperience,
-      profileImageUrl !== undefined ? profileImageUrl : this.profileImageUrl,
+      profileImageUrl ?? this.profileImageUrl,
       this.timeSlotDuration,
       this.isActive,
       this.isVerified,

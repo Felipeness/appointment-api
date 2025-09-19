@@ -53,11 +53,25 @@ export class ResilientPrismaService implements OnModuleInit {
     args: Record<string, unknown>,
   ): Promise<T | null> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as Record<string, any>)[model];
+      const modelProxy = (
+        this.prisma as unknown as Record<
+          string,
+          {
+            findUnique?: (args: unknown) => Promise<unknown>;
+            findMany?: (args?: unknown) => Promise<unknown[]>;
+            create?: (args: unknown) => Promise<unknown>;
+            update?: (args: unknown) => Promise<unknown>;
+            delete?: (args: unknown) => Promise<unknown>;
+          }
+        >
+      )[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
-      return await modelProxy.findUnique(args);
+      if (!modelProxy.findUnique) {
+        throw new Error(`Method findUnique not found on model ${model}`);
+      }
+      return await modelProxy.findUnique(args) as T | null;
     });
   }
 
@@ -66,41 +80,97 @@ export class ResilientPrismaService implements OnModuleInit {
     args: Record<string, unknown> = {},
   ): Promise<T[]> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as Record<string, any>)[model];
+      const modelProxy = (
+        this.prisma as unknown as Record<
+          string,
+          {
+            findUnique?: (args: unknown) => Promise<unknown>;
+            findMany?: (args?: unknown) => Promise<unknown[]>;
+            create?: (args: unknown) => Promise<unknown>;
+            update?: (args: unknown) => Promise<unknown>;
+            delete?: (args: unknown) => Promise<unknown>;
+          }
+        >
+      )[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
-      return await modelProxy.findMany(args);
+      if (!modelProxy.findMany) {
+        throw new Error(`Method findMany not found on model ${model}`);
+      }
+      return await modelProxy.findMany(args) as T[];
     });
   }
 
   async create<T>(model: string, args: Record<string, unknown>): Promise<T> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as Record<string, any>)[model];
+      const modelProxy = (
+        this.prisma as unknown as Record<
+          string,
+          {
+            findUnique?: (args: unknown) => Promise<unknown>;
+            findMany?: (args?: unknown) => Promise<unknown[]>;
+            create?: (args: unknown) => Promise<unknown>;
+            update?: (args: unknown) => Promise<unknown>;
+            delete?: (args: unknown) => Promise<unknown>;
+          }
+        >
+      )[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
-      return await modelProxy.create(args);
+      if (!modelProxy.create) {
+        throw new Error(`Method create not found on model ${model}`);
+      }
+      return await modelProxy.create(args) as T;
     });
   }
 
   async update<T>(model: string, args: Record<string, unknown>): Promise<T> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as Record<string, any>)[model];
+      const modelProxy = (
+        this.prisma as unknown as Record<
+          string,
+          {
+            findUnique?: (args: unknown) => Promise<unknown>;
+            findMany?: (args?: unknown) => Promise<unknown[]>;
+            create?: (args: unknown) => Promise<unknown>;
+            update?: (args: unknown) => Promise<unknown>;
+            delete?: (args: unknown) => Promise<unknown>;
+          }
+        >
+      )[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
-      return await modelProxy.update(args);
+      if (!modelProxy.update) {
+        throw new Error(`Method update not found on model ${model}`);
+      }
+      return await modelProxy.update(args) as T;
     });
   }
 
   async delete<T>(model: string, args: Record<string, unknown>): Promise<T> {
     return this.queryCircuitBreaker.execute(async () => {
-      const modelProxy = (this.prisma as Record<string, any>)[model];
+      const modelProxy = (
+        this.prisma as unknown as Record<
+          string,
+          {
+            findUnique?: (args: unknown) => Promise<unknown>;
+            findMany?: (args?: unknown) => Promise<unknown[]>;
+            create?: (args: unknown) => Promise<unknown>;
+            update?: (args: unknown) => Promise<unknown>;
+            delete?: (args: unknown) => Promise<unknown>;
+          }
+        >
+      )[model];
       if (!modelProxy) {
         throw new Error(`Model ${model} not found`);
       }
-      return await modelProxy.delete(args);
+      if (!modelProxy.delete) {
+        throw new Error(`Method delete not found on model ${model}`);
+      }
+      return await modelProxy.delete(args) as T;
     });
   }
 

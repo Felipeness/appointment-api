@@ -1,8 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand, SendMessageCommandInput } from '@aws-sdk/client-sqs';
 import { MessageQueue } from '../../application/interfaces/message-queue.interface';
 import { CircuitBreaker } from '../../common/resilience/circuit-breaker';
+
+interface AwsConfig {
+  sqsQueueUrl: string;
+  region: string;
+  endpointUrl?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+}
 
 export interface EnterpriseMessage {
   id: string;
@@ -25,8 +33,8 @@ export class AwsSqsProducer implements MessageQueue {
   private readonly queueUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    const awsConfig = this.configService.get('aws');
-    
+    const awsConfig = this.configService.get<AwsConfig>('aws');
+
     if (!awsConfig) {
       throw new Error('AWS configuration is required');
     }
@@ -34,7 +42,7 @@ export class AwsSqsProducer implements MessageQueue {
     this.queueUrl = awsConfig.sqsQueueUrl;
 
     // Configure SQS Client
-    const clientConfig: any = {
+    const clientConfig: Record<string, unknown> = {
       region: awsConfig.region,
     };
 
@@ -84,7 +92,7 @@ export class AwsSqsProducer implements MessageQueue {
 
     await this.circuitBreaker.execute(async () => {
       try {
-        const commandParams: any = {
+        const commandParams: SendMessageCommandInput = {
           QueueUrl: this.queueUrl,
           MessageBody: JSON.stringify(enterpriseMessage),
           DelaySeconds: options?.delaySeconds,
@@ -110,7 +118,8 @@ export class AwsSqsProducer implements MessageQueue {
               DataType: 'String',
             },
             correlationId: {
-              StringValue: enterpriseMessage.correlationId ?? enterpriseMessage.id,
+              StringValue:
+                enterpriseMessage.correlationId ?? enterpriseMessage.id,
               DataType: 'String',
             },
             timestamp: {

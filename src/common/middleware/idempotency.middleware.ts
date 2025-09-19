@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware, HttpStatus } from '@nestjs/common';
+import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'redis';
@@ -17,6 +17,7 @@ interface CachedResponse {
 
 @Injectable()
 export class IdempotencyMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(IdempotencyMiddleware.name);
   private readonly redis: Redis.RedisClientType;
   private readonly IDEMPOTENCY_TTL = 86400; // 24 hours
 
@@ -35,7 +36,11 @@ export class IdempotencyMiddleware implements NestMiddleware {
       password: redisPassword,
     });
 
-    this.redis.connect().catch(console.error);
+    this.redis.connect().catch((error: unknown) => {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to connect to Redis:', errorMessage);
+    });
   }
 
   async use(
@@ -103,14 +108,14 @@ export class IdempotencyMiddleware implements NestMiddleware {
       res.json = function (this: Response, body: unknown) {
         responseBody = body;
         responseHeaders = this.getHeaders() as Record<string, string>;
-        return originalJson.call(this, body) as Response;
+        return originalJson.call(this, body);
       };
 
       // Override send method
       res.send = function (this: Response, body: unknown) {
         responseBody = body;
         responseHeaders = this.getHeaders() as Record<string, string>;
-        return originalSend.call(this, body) as Response;
+        return originalSend.call(this, body);
       };
 
       // Continue to next middleware
@@ -133,14 +138,21 @@ export class IdempotencyMiddleware implements NestMiddleware {
                 this.IDEMPOTENCY_TTL,
                 JSON.stringify(cachedResponse),
               );
-            } catch (error) {
-              console.error('Failed to cache idempotent response:', error);
+            } catch (error: unknown) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              this.logger.error(
+                'Failed to cache idempotent response:',
+                errorMessage,
+              );
             }
           }
         })();
       });
-    } catch (error) {
-      console.error('Idempotency middleware error:', error);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error('Idempotency middleware error:', errorMessage);
       // Continue without idempotency if Redis fails
       next();
     }

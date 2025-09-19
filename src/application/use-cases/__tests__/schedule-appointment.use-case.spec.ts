@@ -1,11 +1,44 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { EnterpriseScheduleAppointmentUseCase } from '../enterprise-schedule-appointment.use-case';
 import type { PsychologistRepository } from '../../../domain/repositories/psychologist.repository';
-import { EnterpriseAppointmentProducer } from '../../../infrastructure/messaging/enterprise-appointment.producer';
-import { CreateAppointmentDto } from '../../dtos/create-appointment.dto';
+import type { EnterpriseAppointmentProducer } from '../../../infrastructure/messaging/enterprise-appointment.producer';
+import { Psychologist } from '../../../domain/entities/psychologist.entity';
+import { WorkingHours } from '../../../domain/value-objects/working-hours.vo';
+import type { CreateAppointmentDto } from '../../dtos/create-appointment.dto';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { addHours } from 'date-fns';
+import { AppointmentType } from '../../../domain/entities/enums';
+
+function createMockPsychologist(): Psychologist {
+  const workingHours = new WorkingHours({
+    startTime: '09:00',
+    endTime: '17:00',
+    workingDays: [1, 2, 3, 4, 5], // Monday to Friday
+  });
+
+  return new Psychologist(
+    'psychologist-id',
+    'psychologist@test.com',
+    'Dr. Test',
+    workingHours,
+    '+1234567890',
+    'REG123',
+    'Test biography',
+    100,
+    200,
+    5,
+    'https://example.com/profile.jpg',
+    60,
+    true,
+    true,
+    new Date(),
+    new Date(),
+    'admin',
+    new Date(),
+  );
+}
 
 describe('EnterpriseScheduleAppointmentUseCase', () => {
   let useCase: EnterpriseScheduleAppointmentUseCase;
@@ -77,7 +110,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
   describe('execute', () => {
     it('should queue appointment successfully with valid data', async () => {
       const dto = createValidDto();
-      const mockPsychologist = { id: 'psychologist-id', isActive: true };
+      const mockPsychologist = createMockPsychologist();
 
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
@@ -90,26 +123,31 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       expect(result.priority).toBeDefined();
       expect(result.estimatedProcessingTime).toBeDefined();
 
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          appointmentId: result.appointmentId,
-          patientEmail: dto.patientEmail,
-          patientName: dto.patientName,
-          psychologistId: dto.psychologistId,
-          scheduledAt: dto.scheduledAt,
-        }),
-        expect.objectContaining({
-          priority: expect.any(String) as string,
-          traceId: expect.any(String) as string,
-          messageGroupId: expect.any(String) as string,
-          deduplicationId: expect.any(String) as string,
-        }),
-      );
+      expect(enterpriseProducer).toHaveProperty('sendMessage');
+      expect(enterpriseProducer.sendMessage).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(enterpriseProducer.sendMessage).mock
+        .calls[0];
+      const [messagePayload, messageOptions] = mockCall as [
+        Record<string, unknown>,
+        Record<string, unknown>,
+      ];
+      expect(messagePayload.appointmentId).toBe(result.appointmentId);
+      expect(messagePayload.patientEmail).toBe(dto.patientEmail);
+      expect(messagePayload.patientName).toBe(dto.patientName);
+      expect(messagePayload.psychologistId).toBe(dto.psychologistId);
+      expect(messagePayload.scheduledAt).toBe(dto.scheduledAt);
+
+      expect(typeof messageOptions.priority).toBe('string');
+      expect(typeof messageOptions.traceId).toBe('string');
+      expect(typeof messageOptions.messageGroupId).toBe('string');
+      expect(typeof messageOptions.deduplicationId).toBe('string');
 
       // Verify fast validation
-      const findById = psychologistRepository.findById;
-      expect(findById).toHaveBeenCalledWith(dto.psychologistId);
+      expect(psychologistRepository).toHaveProperty('findById');
+      expect(jest.mocked(psychologistRepository.findById)).toHaveBeenCalledWith(
+        dto.psychologistId,
+      );
     });
 
     it('should return failed status when appointment is within 24 hours', async () => {
@@ -119,8 +157,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.status).toBe('failed');
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return failed status when psychologist not found', async () => {
@@ -130,28 +167,46 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.status).toBe('failed');
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
     });
 
     it('should return failed status when psychologist is inactive', async () => {
       const dto = createValidDto();
-      const mockPsychologist = { id: 'psychologist-id', isActive: false };
-      psychologistRepository.findById.mockResolvedValue(mockPsychologist);
+      const mockPsychologist = createMockPsychologist();
+      const inactivePsychologist = new Psychologist(
+        mockPsychologist.id,
+        mockPsychologist.email,
+        mockPsychologist.name,
+        mockPsychologist.workingHours,
+        mockPsychologist.phone,
+        mockPsychologist.registrationId,
+        mockPsychologist.biography,
+        mockPsychologist.consultationFeeMin,
+        mockPsychologist.consultationFeeMax,
+        mockPsychologist.yearsExperience,
+        mockPsychologist.profileImageUrl,
+        mockPsychologist.timeSlotDuration,
+        false, // isActive = false
+        mockPsychologist.isVerified,
+        mockPsychologist.createdAt,
+        mockPsychologist.updatedAt,
+        mockPsychologist.createdBy,
+        mockPsychologist.lastLoginAt,
+      );
+      psychologistRepository.findById.mockResolvedValue(inactivePsychologist);
 
       const result = await useCase.execute(dto);
 
       expect(result.status).toBe('failed');
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).not.toHaveBeenCalled();
+      expect(enterpriseProducer.sendMessage).not.toHaveBeenCalled();
     });
 
     it('should use high priority for emergency appointments', async () => {
       const dto: CreateAppointmentDto = {
         ...createValidDto(),
-        appointmentType: 'EMERGENCY',
+        appointmentType: AppointmentType.EMERGENCY,
       };
-      const mockPsychologist = { id: 'psychologist-id', isActive: true };
+      const mockPsychologist = createMockPsychologist();
 
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
@@ -159,8 +214,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
       const result = await useCase.execute(dto);
 
       expect(result.priority).toBe('high');
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).toHaveBeenCalledWith(
+      expect(enterpriseProducer).toHaveProperty('sendMessage');
+      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
           priority: 'high',
@@ -176,15 +231,15 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
         notes: 'Special requirements',
         consultationFee: 150.0,
       };
-      const mockPsychologist = { id: 'psychologist-id', isActive: true };
+      const mockPsychologist = createMockPsychologist();
 
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
 
       await useCase.execute(dto);
 
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).toHaveBeenCalledWith(
+      expect(enterpriseProducer).toHaveProperty('sendMessage');
+      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           duration: 90,
           notes: 'Special requirements',
@@ -196,7 +251,7 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
 
     it('should generate unique appointment IDs and trace IDs', async () => {
       const dto = createValidDto();
-      const mockPsychologist = { id: 'psychologist-id', isActive: true };
+      const mockPsychologist = createMockPsychologist();
 
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
       enterpriseProducer.sendMessage.mockResolvedValue();
@@ -206,13 +261,12 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
 
       expect(result1.appointmentId).not.toBe(result2.appointmentId);
       expect(result1.traceId).not.toBe(result2.traceId);
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).toHaveBeenCalledTimes(2);
+      expect(enterpriseProducer.sendMessage).toHaveBeenCalledTimes(2);
     });
 
     it('should support custom priority and trace ID options', async () => {
       const dto = createValidDto();
-      const mockPsychologist = { id: 'psychologist-id', isActive: true };
+      const mockPsychologist = createMockPsychologist();
       const customTraceId = 'custom-trace-123';
 
       psychologistRepository.findById.mockResolvedValue(mockPsychologist);
@@ -226,8 +280,8 @@ describe('EnterpriseScheduleAppointmentUseCase', () => {
 
       expect(result.priority).toBe('high');
       expect(result.traceId).toBe(customTraceId);
-      const sendMessage = enterpriseProducer.sendMessage;
-      expect(sendMessage).toHaveBeenCalledWith(
+      expect(enterpriseProducer).toHaveProperty('sendMessage');
+      expect(enterpriseProducer.sendMessage).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
           priority: 'high',

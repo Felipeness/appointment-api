@@ -8,7 +8,7 @@ export interface DomainEvent {
   aggregateId: string;
   aggregateType: string;
   eventType: string;
-  eventData: any;
+  eventData: Record<string, unknown>;
 }
 
 @Injectable()
@@ -26,11 +26,13 @@ export class OutboxService {
    */
   async saveEventInTransaction(
     event: DomainEvent,
-    businessOperation: (prismaTransaction: any) => Promise<any>,
+    businessOperation: (
+      prismaTransaction: PrismaService,
+    ) => Promise<unknown>,
   ): Promise<void> {
     await this.prisma.$transaction(async (prisma) => {
       // Execute business operation first
-      await businessOperation(prisma);
+      await businessOperation(prisma as PrismaService);
 
       // Then save event to outbox - if this fails, business operation is rolled back
       const outboxEvent = new OutboxEventEntity(
@@ -79,8 +81,7 @@ export class OutboxService {
   }
 
   async markEventAsProcessing(eventId: string): Promise<OutboxEventEntity> {
-    const events = await this.outboxRepository.findByAggregateId(eventId);
-    const event = events.find((e) => e.id === eventId);
+    const event = await this.outboxRepository.findById(eventId);
 
     if (!event) {
       throw new Error(`Outbox event not found: ${eventId}`);
@@ -91,8 +92,7 @@ export class OutboxService {
   }
 
   async markEventAsProcessed(eventId: string): Promise<OutboxEventEntity> {
-    const events = await this.outboxRepository.findByAggregateId(eventId);
-    const event = events.find((e) => e.id === eventId);
+    const event = await this.outboxRepository.findById(eventId);
 
     if (!event) {
       throw new Error(`Outbox event not found: ${eventId}`);
@@ -106,8 +106,7 @@ export class OutboxService {
     eventId: string,
     error: string,
   ): Promise<OutboxEventEntity> {
-    const events = await this.outboxRepository.findByAggregateId(eventId);
-    const event = events.find((e) => e.id === eventId);
+    const event = await this.outboxRepository.findById(eventId);
 
     if (!event) {
       throw new Error(`Outbox event not found: ${eventId}`);

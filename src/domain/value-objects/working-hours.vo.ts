@@ -13,9 +13,9 @@ export class WorkingHours {
         data ||
           '{"startTime": "09:00", "endTime": "17:00", "workingDays": [1,2,3,4,5]}',
       ) as { startTime?: string; endTime?: string; workingDays?: number[] };
-      this.startTime = parsed.startTime || '09:00';
-      this.endTime = parsed.endTime || '17:00';
-      this.workingDays = parsed.workingDays || [1, 2, 3, 4, 5];
+      this.startTime = parsed.startTime ?? '09:00';
+      this.endTime = parsed.endTime ?? '17:00';
+      this.workingDays = parsed.workingDays ?? [1, 2, 3, 4, 5];
     } else {
       this.startTime = data.startTime;
       this.endTime = data.endTime;

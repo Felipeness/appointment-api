@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { Id } from '../base/value-object.base';
 
-const AppointmentIdSchema = z.string()
+const AppointmentIdSchema = z
+  .string()
   .uuid('Invalid appointment ID format')
   .brand<'AppointmentId'>();
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/prefer-nullish-coalescing */
 import {
   Injectable,
   CanActivate,
@@ -8,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import {
   RateLimiterMemory,
   RateLimiterRedis,
@@ -28,8 +27,12 @@ export interface RateLimitOptions {
 export const RATE_LIMIT_KEY = 'rate-limit';
 
 export const RateLimit = (options: RateLimitOptions) => {
-  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
-    Reflect.defineMetadata(RATE_LIMIT_KEY, options, descriptor.value);
+  return (
+    target: unknown,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) => {
+    Reflect.defineMetadata(RATE_LIMIT_KEY, options, descriptor.value as object);
     return descriptor;
   };
 };
@@ -67,7 +70,7 @@ export class RateLimitGuard implements CanActivate {
       return true;
     } catch (rejRes) {
       if (rejRes instanceof RateLimiterRes) {
-        const response = context.switchToHttp().getResponse();
+        const response = context.switchToHttp().getResponse<Response>();
 
         // Add rate limit headers
         response.setHeader('X-RateLimit-Limit', rateLimitOptions.points);
@@ -114,8 +117,8 @@ export class RateLimitGuard implements CanActivate {
       const rateLimiterOptions: IRateLimiterOptions = {
         points: options.points,
         duration: options.duration,
-        blockDuration: options.blockDuration || options.duration,
-        keyPrefix: options.keyPrefix || 'rate-limit',
+        blockDuration: options.blockDuration ?? options.duration,
+        keyPrefix: options.keyPrefix ?? 'rate-limit',
       };
 
       // TODO: Use Redis when available
@@ -136,10 +139,10 @@ export class RateLimitGuard implements CanActivate {
 
   private generateKey(request: Request, keyPrefix?: string): string {
     const ip = this.getClientIP(request);
-    const userId = (request as any).user?.id;
+    const userId = (request as Request & { user?: { id: string } }).user?.id;
     const endpoint = request.path;
 
-    const parts = [keyPrefix || 'rate-limit', ip];
+    const parts = [keyPrefix ?? 'rate-limit', ip];
 
     if (userId) {
       parts.push('user', userId);
@@ -151,12 +154,17 @@ export class RateLimitGuard implements CanActivate {
   }
 
   private getClientIP(request: Request): string {
-    return (
-      (request.headers['x-forwarded-for'] as string) ||
-      (request.headers['x-real-ip'] as string) ||
-      request.connection.remoteAddress ||
-      request.ip ||
-      'unknown'
-    );
+    const forwardedFor = request.headers['x-forwarded-for'];
+    const realIp = request.headers['x-real-ip'];
+
+    if (typeof forwardedFor === 'string') {
+      return forwardedFor.split(',')[0]?.trim() ?? 'unknown';
+    }
+
+    if (typeof realIp === 'string') {
+      return realIp;
+    }
+
+    return request.connection.remoteAddress ?? request.ip ?? 'unknown';
   }
 }

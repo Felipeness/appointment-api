@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { Id } from '../base/value-object.base';
 
-const PatientIdSchema = z.string()
+const PatientIdSchema = z
+  .string()
   .uuid('Invalid patient ID format')
   .brand<'PatientId'>();
 

@@ -147,7 +147,10 @@ export class AppointmentsController {
         psychologistId: query.psychologistId,
         status: query.status,
         appointmentType: query.appointmentType,
-        dateRange: query.startDate && query.endDate ? `${query.startDate} - ${query.endDate}` : undefined,
+        dateRange:
+          query.startDate && query.endDate
+            ? `${query.startDate} - ${query.endDate}`
+            : undefined,
       },
     });
 

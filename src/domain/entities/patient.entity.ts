@@ -1,4 +1,4 @@
-import { Gender } from './enums';
+import type { Gender } from './enums';
 
 export class Patient {
   constructor(
@@ -67,12 +67,12 @@ export class Patient {
   ): Patient {
     return new Patient(
       this.id,
-      email || this.email,
+      email ?? this.email,
       this.name,
-      phone !== undefined ? phone : this.phone,
+      phone ?? this.phone,
       this.dateOfBirth,
       this.gender,
-      address !== undefined ? address : this.address,
+      address ?? this.address,
       this.emergencyContact,
       this.emergencyPhone,
       this.medicalNotes,
@@ -96,12 +96,12 @@ export class Patient {
       this.email,
       this.name,
       this.phone,
-      dateOfBirth !== undefined ? dateOfBirth : this.dateOfBirth,
-      gender !== undefined ? gender : this.gender,
+      dateOfBirth ?? this.dateOfBirth,
+      gender ?? this.gender,
       this.address,
-      emergencyContact !== undefined ? emergencyContact : this.emergencyContact,
-      emergencyPhone !== undefined ? emergencyPhone : this.emergencyPhone,
-      medicalNotes !== undefined ? medicalNotes : this.medicalNotes,
+      emergencyContact ?? this.emergencyContact,
+      emergencyPhone ?? this.emergencyPhone,
+      medicalNotes ?? this.medicalNotes,
       this.preferredLanguage,
       this.isActive,
       this.createdAt,

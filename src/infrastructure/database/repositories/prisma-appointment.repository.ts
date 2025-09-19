@@ -101,32 +101,31 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
     const sortBy = pagination?.sortBy ?? 'scheduledAt';
     const sortOrder = pagination?.sortOrder ?? 'desc';
 
-    // Build where clause
-    const where: any = {};
-    
+    const where: Record<string, unknown> = {};
+
     if (filters?.patientId) {
       where.patientId = filters.patientId;
     }
-    
+
     if (filters?.psychologistId) {
       where.psychologistId = filters.psychologistId;
     }
-    
+
     if (filters?.status) {
       where.status = filters.status as PrismaAppointmentStatus;
     }
-    
+
     if (filters?.appointmentType) {
       where.appointmentType = filters.appointmentType as PrismaAppointmentType;
     }
-    
-    if (filters?.startDate || filters?.endDate) {
+
+    if (filters?.startDate ?? filters?.endDate) {
       where.scheduledAt = {};
       if (filters.startDate) {
-        where.scheduledAt.gte = filters.startDate;
+        (where.scheduledAt as { gte?: Date; lte?: Date }).gte = filters.startDate;
       }
       if (filters.endDate) {
-        where.scheduledAt.lte = filters.endDate;
+        (where.scheduledAt as { gte?: Date; lte?: Date }).lte = filters.endDate;
       }
     }
 
@@ -189,22 +188,22 @@ export class PrismaAppointmentRepository implements AppointmentRepository {
       appointment.appointmentType as AppointmentType,
       appointment.status as AppointmentStatus,
       appointment.meetingType as MeetingType,
-      appointment.meetingUrl || undefined,
-      appointment.meetingRoom || undefined,
-      appointment.reason || undefined,
-      appointment.notes || undefined,
-      appointment.privateNotes || undefined,
+      appointment.meetingUrl ?? undefined,
+      appointment.meetingRoom ?? undefined,
+      appointment.reason ?? undefined,
+      appointment.notes ?? undefined,
+      appointment.privateNotes ?? undefined,
       appointment.consultationFee
         ? Number(appointment.consultationFee)
         : undefined,
       appointment.isPaid,
-      appointment.cancelledAt || undefined,
-      appointment.cancelledBy || undefined,
-      appointment.cancellationReason || undefined,
+      appointment.cancelledAt ?? undefined,
+      appointment.cancelledBy ?? undefined,
+      appointment.cancellationReason ?? undefined,
       appointment.createdAt,
       appointment.updatedAt,
-      appointment.confirmedAt || undefined,
-      appointment.completedAt || undefined,
+      appointment.confirmedAt ?? undefined,
+      appointment.completedAt ?? undefined,
     );
   }
 

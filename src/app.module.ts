@@ -19,7 +19,6 @@ import { AppService } from './app.service';
     // Schedule module for cron jobs (outbox processing)
     ScheduleModule.forRoot(),
 
-
     // Feature modules
     AppointmentModule,
     IdempotencyModule,

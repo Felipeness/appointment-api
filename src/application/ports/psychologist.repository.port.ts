@@ -1,6 +1,6 @@
-import { Psychologist } from '../../domain/entities/psychologist.entity';
-import { PsychologistId } from '../../domain/value-objects/psychologist-id.vo';
-import { Email } from '../../domain/value-objects/email.vo';
+import type { Psychologist } from '../../domain/entities/psychologist.entity';
+import type { PsychologistId } from '../../domain/value-objects/psychologist-id.vo';
+import type { Email } from '../../domain/value-objects/email.vo';
 
 export interface PsychologistRepositoryPort {
   save(psychologist: Psychologist): Promise<void>;

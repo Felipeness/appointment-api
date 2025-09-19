@@ -28,7 +28,9 @@ export class DateService {
   }
 
   static differenceInMinutes(laterDate: Date, earlierDate: Date): number {
-    return Math.floor((laterDate.getTime() - earlierDate.getTime()) / (1000 * 60));
+    return Math.floor(
+      (laterDate.getTime() - earlierDate.getTime()) / (1000 * 60),
+    );
   }
 
   static isToday(date: Date): boolean {

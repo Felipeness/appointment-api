@@ -145,9 +145,12 @@ export class IdempotencyInterceptor implements NestInterceptor {
                 statusCode: response.statusCode,
                 body: data as Record<string, unknown>,
                 headers: {
-                  'content-type':
-                    (response.getHeader('content-type') as string) ??
-                    'application/json',
+                  'content-type': (() => {
+                    const contentType = response.getHeader('content-type');
+                    return typeof contentType === 'string'
+                      ? contentType
+                      : 'application/json';
+                  })(),
                 },
               },
               createdAt: new Date(),
@@ -194,8 +197,9 @@ export class IdempotencyInterceptor implements NestInterceptor {
 
   private extractUserId(request: RequestWithUser): string | undefined {
     // Multiple ways to extract user ID
+    const userIdHeader = request.headers['x-user-id'];
     return (
-      (request.headers['x-user-id'] as string) ??
+      (typeof userIdHeader === 'string' ? userIdHeader : undefined) ??
       request.user?.id ??
       request.user?.userId
     );

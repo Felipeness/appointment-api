@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   IdempotencyService,
   IdempotencyRecord,
@@ -12,41 +12,41 @@ export class RedisIdempotencyService implements IdempotencyService {
 
   constructor() {}
 
-  async store(record: IdempotencyRecord): Promise<void> {
+  store(record: IdempotencyRecord): Promise<void> {
     const cacheKey = this.buildCacheKey(
       record.key,
       record.userId,
       record.endpoint,
     );
 
-    // Simple in-memory storage
     this.cache.set(cacheKey, record);
-    
+
     this.logger.debug(`Stored idempotency record`, {
       key: record.key,
       endpoint: record.endpoint,
       cacheKey,
     });
+
+    return Promise.resolve();
   }
 
-  async get(
+  get(
     key: string,
     userId?: string,
     endpoint?: string,
   ): Promise<IdempotencyRecord | null> {
     const cacheKey = this.buildCacheKey(key, userId, endpoint);
     const record = this.cache.get(cacheKey);
-    
+
     if (record) {
-      // Check expiration
       if (record.expiresAt.getTime() < Date.now()) {
         this.cache.delete(cacheKey);
-        return null;
+        return Promise.resolve(null);
       }
-      return record;
+      return Promise.resolve(record);
     }
 
-    return null;
+    return Promise.resolve(null);
   }
 
   async exists(

@@ -1,4 +1,4 @@
-import { Psychologist } from '../entities/psychologist.entity';
+import type { Psychologist } from '../entities/psychologist.entity';
 
 export interface PsychologistRepository {
   findById(id: string): Promise<Psychologist | null>;

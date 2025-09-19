@@ -3,7 +3,7 @@ export interface OutboxEvent {
   aggregateId: string;
   aggregateType: string;
   eventType: string;
-  eventData: any;
+  eventData: Record<string, unknown>;
   createdAt: Date;
   processedAt?: Date;
   retryCount: number;
@@ -19,7 +19,7 @@ export class OutboxEventEntity implements OutboxEvent {
     public readonly aggregateId: string,
     public readonly aggregateType: string,
     public readonly eventType: string,
-    public readonly eventData: any,
+    public readonly eventData: Record<string, unknown>,
     public readonly createdAt: Date = new Date(),
     public readonly processedAt?: Date,
     public readonly retryCount: number = 0,

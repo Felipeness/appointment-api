@@ -1,8 +1,8 @@
 import { Entity } from './entity.base';
-import { DomainEvent } from './domain-event.base';
+import type { DomainEvent } from './domain-event.base';
 
 export abstract class AggregateRoot<T = unknown> extends Entity<T> {
-  private _domainEvents: DomainEvent[] = [];
+  private readonly _domainEvents: DomainEvent[] = [];
   private _version: number = 0;
 
   constructor(props: T, id?: string, version?: number) {

@@ -106,7 +106,7 @@ export class OutboxPublisherService implements OnModuleInit {
           `Outbox event exceeded max retries: ${event.eventType} for ${event.aggregateId}`,
         );
         // Here you could send to Dead Letter Queue or alert monitoring system
-        await this.handleFailedEvent(failedEvent);
+        this.handleFailedEvent(failedEvent);
       }
     }
   }
@@ -117,7 +117,7 @@ export class OutboxPublisherService implements OnModuleInit {
       eventType: event.eventType,
       aggregateId: event.aggregateId,
       aggregateType: event.aggregateType,
-      eventData: event.eventData as Record<string, unknown>,
+      eventData: event.eventData,
       metadata: {
         eventId: event.id,
         version: event.version,
@@ -128,8 +128,7 @@ export class OutboxPublisherService implements OnModuleInit {
     await this.messageQueue.sendMessage(message);
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  private async handleFailedEvent(event: OutboxEventEntity): Promise<void> {
+  private handleFailedEvent(event: OutboxEventEntity): void {
     // Send to Dead Letter Queue or monitoring system
     this.logger.error(
       `Sending failed event to DLQ: ${event.eventType} for ${event.aggregateId}`,

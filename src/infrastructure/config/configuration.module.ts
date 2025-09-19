@@ -17,7 +17,7 @@ import { join } from 'path';
       },
       load: [awsConfig],
       envFilePath: [
-        join(process.cwd(), `.env.${process.env.NODE_ENV || 'development'}`),
+        join(process.cwd(), `.env.${process.env.NODE_ENV ?? 'development'}`),
         join(process.cwd(), '.env'),
       ],
     }),

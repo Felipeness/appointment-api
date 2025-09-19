@@ -1,7 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsNumber, Min, Max, IsEnum, IsDateString } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  Min,
+  Max,
+  IsEnum,
+  IsDateString,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { AppointmentStatus, AppointmentType } from '../../domain/entities/enums';
+import {
+  AppointmentStatus,
+  AppointmentType,
+} from '../../domain/entities/enums';
 
 export class ListAppointmentsQueryDto {
   @ApiPropertyOptional({
@@ -94,6 +105,8 @@ export class ListAppointmentsQueryDto {
   })
   @IsOptional()
   @IsString()
-  @Transform(({ value }) => value?.toLowerCase())
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toLowerCase() : value,
+  )
   sortOrder?: 'asc' | 'desc' = 'desc';
 }

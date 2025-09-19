@@ -70,7 +70,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
               ),
         error:
           typeof exceptionResponse === 'string'
-            ? HttpStatus[status] || 'Unknown Error'
+            ? (HttpStatus[status] ?? 'Unknown Error')
             : this.safeStringify(
                 (exceptionResponse as Record<string, unknown>).error ??
                   HttpStatus[status] ??
@@ -285,7 +285,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return '[object Object]';
       }
     }
-    // This will handle primitives like numbers, booleans, etc.
-    return String(value);
+    return '[Unknown Value]';
   }
 }

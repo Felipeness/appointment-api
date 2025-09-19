@@ -3,10 +3,10 @@ export interface IdempotencyRecord {
   userId?: string;
   endpoint: string;
   method: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   response: {
     statusCode: number;
-    body: any;
+    body: unknown;
     headers?: Record<string, string>;
   };
   createdAt: Date;
@@ -53,7 +53,7 @@ export interface IdempotencyKeyGenerator {
   /**
    * Generate a unique idempotency key
    */
-  generate(context?: Record<string, any>): string;
+  generate(context?: Record<string, unknown>): string;
 
   /**
    * Validate idempotency key format

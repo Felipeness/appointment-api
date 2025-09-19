@@ -1,3 +1,4 @@
+
 services:
   # PostgreSQL Database
   postgres:
@@ -63,9 +64,7 @@ services:
 
   # Appointment API Application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: oven/bun:1
     container_name: appointment-api
     environment:
       - NODE_ENV=development
@@ -97,6 +96,14 @@ services:
       sh -c "
         echo 'Aguardando serviços...' &&
         sleep 10 &&
+        echo 'Instalando AWS CLI...' &&
+        apt-get update && apt-get install -y curl unzip &&
+        curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip' &&
+        unzip awscliv2.zip && ./aws/install && rm -rf awscliv2.zip aws &&
+        echo 'Instalando dependências...' &&
+        bun install &&
+        echo 'Gerando Prisma client...' &&
+        bunx prisma generate &&
         echo 'Aplicando migrações...' &&
         bun prisma migrate deploy &&
         echo 'Executando seed...' &&

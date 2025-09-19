@@ -2,12 +2,13 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ListAppointmentsQueryDto } from '../dtos/list-appointments-query.dto';
 import { AppointmentResponseDto } from '../dtos/appointment-response.dto';
 import { PaginatedResponseDto } from '../dtos/paginated-response.dto';
-import type { 
+import type {
   AppointmentRepository,
   ListAppointmentsFilters,
   PaginationOptions,
 } from '../../domain/repositories/appointment.repository';
 import { INJECTION_TOKENS } from '../../shared/constants/injection-tokens';
+import { Appointment } from '../../domain/entities/appointment.entity';
 
 @Injectable()
 export class ListAppointmentsUseCase {
@@ -65,37 +66,57 @@ export class ListAppointmentsUseCase {
     }
   }
 
-  private extractFilters(query: ListAppointmentsQueryDto): ListAppointmentsFilters {
+  private extractFilters(
+    query: ListAppointmentsQueryDto,
+  ): ListAppointmentsFilters {
     const filters: ListAppointmentsFilters = {};
 
-    if (query.patientId) {
+    if (
+      query.patientId !== undefined &&
+      query.patientId !== null &&
+      query.patientId !== ''
+    ) {
       filters.patientId = query.patientId;
     }
 
-    if (query.psychologistId) {
+    if (
+      query.psychologistId !== undefined &&
+      query.psychologistId !== null &&
+      query.psychologistId !== ''
+    ) {
       filters.psychologistId = query.psychologistId;
     }
 
-    if (query.status) {
+    if (query.status !== undefined && query.status !== null) {
       filters.status = query.status;
     }
 
-    if (query.appointmentType) {
+    if (query.appointmentType !== undefined && query.appointmentType !== null) {
       filters.appointmentType = query.appointmentType;
     }
 
-    if (query.startDate) {
+    if (
+      query.startDate !== undefined &&
+      query.startDate !== null &&
+      query.startDate !== ''
+    ) {
       filters.startDate = new Date(query.startDate);
     }
 
-    if (query.endDate) {
+    if (
+      query.endDate !== undefined &&
+      query.endDate !== null &&
+      query.endDate !== ''
+    ) {
       filters.endDate = new Date(query.endDate);
     }
 
     return filters;
   }
 
-  private extractPagination(query: ListAppointmentsQueryDto): PaginationOptions {
+  private extractPagination(
+    query: ListAppointmentsQueryDto,
+  ): PaginationOptions {
     return {
       page: query.page ?? 1,
       limit: query.limit ?? 20,
@@ -104,7 +125,7 @@ export class ListAppointmentsUseCase {
     };
   }
 
-  private mapToResponseDto(appointment: any): AppointmentResponseDto {
+  private mapToResponseDto(appointment: Appointment): AppointmentResponseDto {
     return {
       id: appointment.id,
       patientId: appointment.patientId,

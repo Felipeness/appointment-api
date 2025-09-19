@@ -7,10 +7,10 @@ import * as express from 'express';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CorrelationIdInterceptor } from './common/interceptors/correlation-id.interceptor';
-import { DDoSProtectionMiddleware } from './common/middleware/ddos-protection.middleware';
+import { SimpleRateLimitMiddleware } from './common/middleware/simple-rate-limit.middleware';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
-import { EnvConfig } from './infrastructure/config/env.validation';
+import type { EnvConfig } from './infrastructure/config/env.validation';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -84,9 +84,9 @@ async function bootstrap() {
   // Security middleware
   app.use(new SecurityMiddleware().use.bind(new SecurityMiddleware()));
 
-  // DDoS protection middleware
+  // Simple rate limiting middleware
   app.use(
-    new DDoSProtectionMiddleware().use.bind(new DDoSProtectionMiddleware()),
+    new SimpleRateLimitMiddleware().use.bind(new SimpleRateLimitMiddleware()),
   );
 
   // Global error handling

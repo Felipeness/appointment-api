@@ -5,7 +5,7 @@ import { SagaStep, SagaContext, SagaStatus, SagaExecution } from './saga.types';
 @Injectable()
 export class SagaOrchestrator {
   private readonly logger = new Logger(SagaOrchestrator.name);
-  private executions = new Map<string, SagaExecution>();
+  private readonly executions = new Map<string, SagaExecution>();
 
   async executeSaga(
     sagaName: string,
@@ -84,7 +84,7 @@ export class SagaOrchestrator {
   }
 
   private async executeStepWithRetry(step: SagaStep): Promise<unknown> {
-    const maxRetries = step.maxRetries || 3;
+    const maxRetries = step.maxRetries ?? 3;
     let lastError: Error;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {

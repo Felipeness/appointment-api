@@ -1,9 +1,20 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import { ArgumentsHost } from '@nestjs/common';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import type { ArgumentsHost } from '@nestjs/common';
 import { GlobalExceptionFilter } from '../global-exception.filter';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
+interface ErrorResponseData {
+  statusCode: number;
+  message: string | string[];
+  error: string;
+  path?: string;
+  method?: string;
+  timestamp?: string;
+  correlationId?: string;
+  details?: Record<string, unknown>;
+}
 
 describe('GlobalExceptionFilter', () => {
   let filter: GlobalExceptionFilter;
@@ -11,7 +22,7 @@ describe('GlobalExceptionFilter', () => {
   const mockRequest = {
     url: '/test',
     method: 'GET',
-    headers: {},
+    headers: {} satisfies Record<string, string>,
     body: {},
     query: {},
     params: {},
@@ -28,6 +39,11 @@ describe('GlobalExceptionFilter', () => {
       getRequest: () => mockRequest,
       getResponse: () => mockResponse,
     }),
+    getArgs: () => [],
+    getArgByIndex: () => undefined,
+    switchToRpc: () => ({}) as never,
+    switchToWs: () => ({}) as never,
+    getType: () => 'http' as const,
   } as ArgumentsHost;
 
   beforeEach(async () => {
@@ -52,17 +68,17 @@ describe('GlobalExceptionFilter', () => {
       filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          statusCode: HttpStatus.BAD_REQUEST,
-          message: 'Test error',
-          error: 'BAD_REQUEST',
-          path: '/test',
-          method: 'GET',
-          timestamp: expect.any(String),
-          correlationId: expect.any(String),
-        }),
-      );
+      expect(mockResponse.json).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(mockResponse.json).mock.calls[0];
+      const responseData = mockCall?.[0] as ErrorResponseData;
+      expect(responseData.statusCode).toBe(HttpStatus.BAD_REQUEST);
+      expect(responseData.message).toBe('Test error');
+      expect(responseData.error).toBe('BAD_REQUEST');
+      expect(responseData.path).toBe('/test');
+      expect(responseData.method).toBe('GET');
+      expect(typeof responseData.timestamp).toBe('string');
+      expect(typeof responseData.correlationId).toBe('string');
     });
 
     it('should handle HttpException with object response', () => {
@@ -100,15 +116,17 @@ describe('GlobalExceptionFilter', () => {
       filter.catch(exception, mockArgumentsHost);
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          statusCode: HttpStatus.CONFLICT,
-          message: 'A record with this information already exists',
-          error: 'Duplicate Entry',
-          details: expect.objectContaining({
-            code: 'P2002',
-          }),
-        }),
+      expect(mockResponse.json).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(mockResponse.json).mock.calls[0];
+      const responseData = mockCall?.[0] as ErrorResponseData;
+      expect(responseData.statusCode).toBe(HttpStatus.CONFLICT);
+      expect(responseData.message).toBe(
+        'A record with this information already exists',
+      );
+      expect(responseData.error).toBe('Duplicate Entry');
+      expect((responseData.details as Record<string, unknown>).code).toBe(
+        'P2002',
       );
     });
 
@@ -144,16 +162,18 @@ describe('GlobalExceptionFilter', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-          message: 'Generic error message',
-          error: 'Internal Server Error',
-          details: expect.objectContaining({
-            stack: expect.any(String),
-            name: 'Error',
-          }),
-        }),
+      expect(mockResponse.json).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(mockResponse.json).mock.calls[0];
+      const responseData = mockCall?.[0] as ErrorResponseData;
+      expect(responseData.statusCode).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+      expect(responseData.message).toBe('Generic error message');
+      expect(responseData.error).toBe('Internal Server Error');
+      expect(
+        typeof (responseData.details as Record<string, unknown>).stack,
+      ).toBe('string');
+      expect((responseData.details as Record<string, unknown>).name).toBe(
+        'Error',
       );
 
       process.env.NODE_ENV = originalEnv;
@@ -167,12 +187,12 @@ describe('GlobalExceptionFilter', () => {
 
       filter.catch(exception, mockArgumentsHost);
 
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'Internal server error',
-          details: undefined,
-        }),
-      );
+      expect(mockResponse.json).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(mockResponse.json).mock.calls[0];
+      const responseData = mockCall?.[0] as ErrorResponseData;
+      expect(responseData.message).toBe('Internal server error');
+      expect(responseData.details).toBeUndefined();
 
       process.env.NODE_ENV = originalEnv;
     });
@@ -186,11 +206,11 @@ describe('GlobalExceptionFilter', () => {
       const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
       filter.catch(exception, mockArgumentsHost);
 
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          correlationId,
-        }),
-      );
+      expect(mockResponse.json).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(mockResponse.json).mock.calls[0];
+      const responseData = mockCall?.[0] as ErrorResponseData;
+      expect(responseData.correlationId).toBe(correlationId);
     });
 
     it('should generate correlation ID if not provided', () => {
@@ -199,11 +219,11 @@ describe('GlobalExceptionFilter', () => {
       const exception = new HttpException('Test', HttpStatus.BAD_REQUEST);
       filter.catch(exception, mockArgumentsHost);
 
-      expect(mockResponse.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          correlationId: expect.any(String),
-        }),
-      );
+      expect(mockResponse.json).toHaveBeenCalled();
+
+      const mockCall = jest.mocked(mockResponse.json).mock.calls[0];
+      const responseData = mockCall?.[0] as ErrorResponseData;
+      expect(typeof responseData.correlationId).toBe('string');
     });
   });
 });

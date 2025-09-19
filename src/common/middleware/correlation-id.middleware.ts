@@ -14,12 +14,13 @@ export class CorrelationIdMiddleware implements NestMiddleware {
 
   use(req: RequestWithCorrelationId, res: Response, next: NextFunction): void {
     const correlationIdHeader =
-      this.configService.get('CORRELATION_ID_HEADER', { infer: true }) ||
+      this.configService.get('CORRELATION_ID_HEADER', { infer: true }) ??
       'x-correlation-id';
 
     // Extract correlation ID from header or generate new one
+    const headerValue = req.headers[correlationIdHeader];
     const correlationId =
-      (req.headers[correlationIdHeader] as string) || uuidv4();
+      typeof headerValue === 'string' ? headerValue : uuidv4();
 
     // Set correlation ID on request object
     req.correlationId = correlationId;

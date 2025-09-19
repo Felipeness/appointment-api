@@ -18,7 +18,7 @@ fi
 
 # Parar containers existentes se houver
 echo -e "${YELLOW}📦 Parando containers existentes...${NC}"
-docker-compose -f docker-compose.complete.yml down --remove-orphans
+DOCKER_CONFIG="" docker-compose -f docker-compose.complete.yml down --remove-orphans
 
 # Limpar volumes órfãos se necessário
 echo -e "${YELLOW}🧹 Limpando volumes órfãos...${NC}"
@@ -30,11 +30,11 @@ echo "⏳ Isso pode levar alguns minutos na primeira execução..."
 
 # Executar em background se passado o argumento -d
 if [ "$1" = "-d" ]; then
-    docker-compose -f docker-compose.complete.yml up --build -d
+    DOCKER_CONFIG="" docker-compose -f docker-compose.complete.yml up -d
     echo -e "${GREEN}✅ Sistema iniciado em modo detached!${NC}"
     echo "📊 Para ver logs: docker-compose -f docker-compose.complete.yml logs -f"
 else
-    docker-compose -f docker-compose.complete.yml up --build
+    DOCKER_CONFIG="" docker-compose -f docker-compose.complete.yml up
 fi
 
 echo -e "${GREEN}✅ Sistema disponível em:${NC}"

@@ -1,6 +1,6 @@
-import { Patient } from '../../domain/aggregates/patient.aggregate';
-import { PatientId } from '../../domain/value-objects/patient-id.vo';
-import { Email } from '../../domain/value-objects/email.vo';
+import type { Patient } from '../../domain/aggregates/patient.aggregate';
+import type { PatientId } from '../../domain/value-objects/patient-id.vo';
+import type { Email } from '../../domain/value-objects/email.vo';
 
 export interface PatientRepositoryPort {
   save(patient: Patient): Promise<void>;

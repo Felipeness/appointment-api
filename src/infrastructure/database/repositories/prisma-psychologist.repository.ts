@@ -57,7 +57,7 @@ export class PrismaPsychologistRepository implements PsychologistRepository {
 
   private toDomain(psychologist: PrismaPsychologist): Psychologist {
     const workingHours = new WorkingHours(
-      (psychologist as unknown as { workingHours?: string }).workingHours ||
+      (psychologist as unknown as { workingHours?: string }).workingHours ??
         '{}',
     );
 
@@ -66,24 +66,24 @@ export class PrismaPsychologistRepository implements PsychologistRepository {
       psychologist.email,
       psychologist.name,
       workingHours,
-      psychologist.phone || undefined,
-      psychologist.registrationId || undefined,
-      psychologist.biography || undefined,
+      psychologist.phone ?? undefined,
+      psychologist.registrationId ?? undefined,
+      psychologist.biography ?? undefined,
       psychologist.consultationFeeMin
         ? Number(psychologist.consultationFeeMin)
         : undefined,
       psychologist.consultationFeeMax
         ? Number(psychologist.consultationFeeMax)
         : undefined,
-      psychologist.yearsExperience || undefined,
-      psychologist.profileImageUrl || undefined,
+      psychologist.yearsExperience ?? undefined,
+      psychologist.profileImageUrl ?? undefined,
       psychologist.timeSlotDuration,
       psychologist.isActive,
       psychologist.isVerified,
       psychologist.createdAt,
       psychologist.updatedAt,
-      psychologist.createdBy || undefined,
-      psychologist.lastLoginAt || undefined,
+      psychologist.createdBy ?? undefined,
+      psychologist.lastLoginAt ?? undefined,
     );
   }
 

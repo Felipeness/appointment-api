@@ -70,6 +70,14 @@ export class OutboxRepository {
     return events.map((event) => this.toDomain(event));
   }
 
+  async findById(id: string): Promise<OutboxEventEntity | null> {
+    const event = await this.prisma.outboxEvent.findUnique({
+      where: { id },
+    });
+
+    return event ? this.toDomain(event) : null;
+  }
+
   async deleteProcessedEvents(olderThanDays: number = 7): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
@@ -92,13 +100,17 @@ export class OutboxRepository {
       event.aggregateId,
       event.aggregateType,
       event.eventType,
-      JSON.parse(event.eventData as string),
+      JSON.parse(
+        typeof event.eventData === 'string'
+          ? event.eventData
+          : JSON.stringify(event.eventData ?? {}),
+      ) as Record<string, unknown>,
       event.createdAt,
-      event.processedAt || undefined,
+      event.processedAt ?? undefined,
       event.retryCount,
       event.maxRetries,
       event.status as 'PENDING' | 'FAILED' | 'PROCESSING' | 'PROCESSED',
-      event.error || undefined,
+      event.error ?? undefined,
       event.version,
     );
   }

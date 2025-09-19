@@ -28,26 +28,22 @@ describe('Simple Resilience Tests', () => {
         {
           id: 'step1',
           name: 'First Step',
-          // eslint-disable-next-line @typescript-eslint/require-await
-          action: async () => {
+          action: () => {
             executionOrder.push('action1');
-            return 'result1';
+            return Promise.resolve('result1');
           },
-          // eslint-disable-next-line @typescript-eslint/require-await
-          compensation: async () => {
+          compensation: () => {
             executionOrder.push('compensation1');
           },
         },
         {
           id: 'step2',
           name: 'Second Step',
-          // eslint-disable-next-line @typescript-eslint/require-await
-          action: async () => {
+          action: () => {
             executionOrder.push('action2');
-            return 'result2';
+            return Promise.resolve('result2');
           },
-          // eslint-disable-next-line @typescript-eslint/require-await
-          compensation: async () => {
+          compensation: () => {
             executionOrder.push('compensation2');
           },
         },
@@ -66,26 +62,22 @@ describe('Simple Resilience Tests', () => {
         {
           id: 'step1',
           name: 'First Step (Success)',
-          // eslint-disable-next-line @typescript-eslint/require-await
-          action: async () => {
+          action: () => {
             executionOrder.push('action1');
-            return 'result1';
+            return Promise.resolve('result1');
           },
-          // eslint-disable-next-line @typescript-eslint/require-await
-          compensation: async () => {
+          compensation: () => {
             executionOrder.push('compensation1');
           },
         },
         {
           id: 'step2',
           name: 'Second Step (Failure)',
-          // eslint-disable-next-line @typescript-eslint/require-await
-          action: async () => {
+          action: () => {
             executionOrder.push('action2');
-            throw new Error('Step 2 failed');
+            return Promise.reject(new Error('Step 2 failed'));
           },
-          // eslint-disable-next-line @typescript-eslint/require-await
-          compensation: async () => {
+          compensation: () => {
             executionOrder.push('compensation2');
           },
         },
@@ -188,10 +180,9 @@ describe('Simple Resilience Tests', () => {
 
       try {
         // Step 1: Circuit breaker protects external service call
-        // eslint-disable-next-line @typescript-eslint/require-await
-        await circuitBreaker.execute(async () => {
+        await circuitBreaker.execute(() => {
           // Simulate external service success
-          return { status: 'validated' };
+          return Promise.resolve({ status: 'validated' });
         });
 
         // Step 2: Saga manages distributed transaction
@@ -199,8 +190,7 @@ describe('Simple Resilience Tests', () => {
           {
             id: 'reserve-slot',
             name: 'Reserve Time Slot',
-            // eslint-disable-next-line @typescript-eslint/require-await
-            action: async () => 'slot-reserved',
+            action: () => Promise.resolve('slot-reserved'),
 
             compensation: async () => {
               // Release slot
@@ -209,8 +199,7 @@ describe('Simple Resilience Tests', () => {
           {
             id: 'send-notification',
             name: 'Send Confirmation',
-            // eslint-disable-next-line @typescript-eslint/require-await
-            action: async () => 'notification-sent',
+            action: () => Promise.resolve('notification-sent'),
 
             compensation: async () => {
               // Send cancellation

@@ -16,9 +16,9 @@ const phoneRegex = /^[+]?[\d\s\-()]{8,20}$/;
 // URL validation for meeting URLs
 const urlRegex = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 
-// UUID validation for psychologist ID
-const uuidRegex =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// UUID/CUID validation for psychologist ID (currently unused but kept for reference)
+// const uuidRegex =
+//   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const CreateAppointmentSchema = z
   .object({
@@ -52,10 +52,21 @@ export const CreateAppointmentSchema = z
     patientPhone: z
       .string()
       .optional()
-      .transform((phone) => (phone ? sanitizePhone(phone) : phone))
-      .refine((phone) => !phone || phoneRegex.test(phone), {
-        message: 'Invalid phone number format',
-      }),
+      .transform((phone) =>
+        phone !== undefined && phone !== null && phone !== ''
+          ? sanitizePhone(phone)
+          : phone,
+      )
+      .refine(
+        (phone) =>
+          phone === undefined ||
+          phone === null ||
+          phone === '' ||
+          phoneRegex.test(phone),
+        {
+          message: 'Invalid phone number format',
+        },
+      ),
 
     // Psychologist ID validation - relaxed for testing
     psychologistId: z
@@ -111,22 +122,34 @@ export const CreateAppointmentSchema = z
     meetingUrl: z
       .string()
       .optional()
-      .refine((url) => !url || urlRegex.test(url), {
-        message: 'Invalid meeting URL format',
-      }),
+      .refine(
+        (url) =>
+          url === undefined || url === null || url === '' || urlRegex.test(url),
+        {
+          message: 'Invalid meeting URL format',
+        },
+      ),
 
     // Meeting room conditional validation
     meetingRoom: z
       .string()
       .max(100, 'Meeting room name too long')
-      .transform((room) => (room ? sanitizeString(room) : room))
+      .transform((room) =>
+        room !== undefined && room !== null && room !== ''
+          ? sanitizeString(room)
+          : room,
+      )
       .optional(),
 
     // Reason validation with sanitization
     reason: z
       .string()
       .max(500, 'Reason too long')
-      .transform((reason) => (reason ? sanitizeString(reason) : reason))
+      .transform((reason) =>
+        reason !== undefined && reason !== null && reason !== ''
+          ? sanitizeString(reason)
+          : reason,
+      )
       .optional(),
 
     // Notes validation with sanitization
@@ -151,7 +174,11 @@ export const CreateAppointmentSchema = z
         data.meetingType === MeetingType.VIDEO_CALL ||
         data.meetingType === MeetingType.PHONE_CALL
       ) {
-        return data.meetingUrl && data.meetingUrl.length > 0;
+        return (
+          data.meetingUrl !== undefined &&
+          data.meetingUrl !== null &&
+          data.meetingUrl.length > 0
+        );
       }
       return true;
     },
@@ -164,7 +191,11 @@ export const CreateAppointmentSchema = z
     (data) => {
       // If meeting type is in-person, meeting room should be provided
       if (data.meetingType === MeetingType.IN_PERSON) {
-        return data.meetingRoom && data.meetingRoom.length > 0;
+        return (
+          data.meetingRoom !== undefined &&
+          data.meetingRoom !== null &&
+          data.meetingRoom.length > 0
+        );
       }
       return true;
     },
@@ -172,23 +203,23 @@ export const CreateAppointmentSchema = z
       message: 'Meeting room is required for in-person appointments',
       path: ['meetingRoom'],
     },
-  )
-  // Business hours validation disabled for testing
-  // .refine(
-  //   (data) => {
-  //     // Validate business hours (9 AM to 6 PM, Monday to Friday)
-  //     const appointmentDate = data.scheduledAt;
-  //     const dayOfWeek = appointmentDate.getDay(); // 0 = Sunday, 6 = Saturday
-  //     const hour = appointmentDate.getHours();
+  );
+// Business hours validation disabled for testing
+// .refine(
+//   (data) => {
+//     // Validate business hours (9 AM to 6 PM, Monday to Friday)
+//     const appointmentDate = data.scheduledAt;
+//     const dayOfWeek = appointmentDate.getDay(); // 0 = Sunday, 6 = Saturday
+//     const hour = appointmentDate.getHours();
 
-  //     return dayOfWeek >= 1 && dayOfWeek <= 5 && hour >= 9 && hour < 18;
-  //   },
-  //   {
-  //     message:
-  //       'Appointments can only be scheduled during business hours (9 AM - 6 PM, Monday to Friday)',
-  //     path: ['scheduledAt'],
-  //   },
-  // );
+//     return dayOfWeek >= 1 && dayOfWeek <= 5 && hour >= 9 && hour < 18;
+//   },
+//   {
+//     message:
+//       'Appointments can only be scheduled during business hours (9 AM - 6 PM, Monday to Friday)',
+//     path: ['scheduledAt'],
+//   },
+// );
 
 export type CreateAppointmentInput = z.infer<typeof CreateAppointmentSchema>;
 

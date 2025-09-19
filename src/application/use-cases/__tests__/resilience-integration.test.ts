@@ -1,4 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { ResilientProcessAppointmentUseCase } from '../resilient-process-appointment.use-case';
 import { ProcessAppointmentUseCase } from '../process-appointment.use-case';
 import { SagaOrchestrator } from '../../../common/saga/saga-orchestrator';

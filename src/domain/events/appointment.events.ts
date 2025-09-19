@@ -1,7 +1,7 @@
 import { BaseDomainEvent } from '../base/domain-event.base';
-import { AppointmentId } from '../value-objects/appointment-id.vo';
-import { PatientId } from '../value-objects/patient-id.vo';
-import { PsychologistId } from '../value-objects/psychologist-id.vo';
+import type { AppointmentId } from '../value-objects/appointment-id.vo';
+import type { PatientId } from '../value-objects/patient-id.vo';
+import type { PsychologistId } from '../value-objects/psychologist-id.vo';
 
 export class AppointmentScheduledEvent extends BaseDomainEvent {
   public readonly patientId: PatientId;
@@ -15,7 +15,7 @@ export class AppointmentScheduledEvent extends BaseDomainEvent {
     psychologistId: PsychologistId,
     scheduledAt: Date,
     duration: number,
-    version: number = 1
+    version: number = 1,
   ) {
     super(appointmentId.toString(), version);
     this.patientId = patientId;
@@ -33,7 +33,7 @@ export class AppointmentConfirmedEvent extends BaseDomainEvent {
     appointmentId: AppointmentId,
     confirmedAt: Date,
     notes?: string,
-    version: number = 1
+    version: number = 1,
   ) {
     super(appointmentId.toString(), version);
     this.confirmedAt = confirmedAt;
@@ -51,7 +51,7 @@ export class AppointmentCancelledEvent extends BaseDomainEvent {
     cancelledAt: Date,
     cancelledBy: string,
     reason?: string,
-    version: number = 1
+    version: number = 1,
   ) {
     super(appointmentId.toString(), version);
     this.cancelledAt = cancelledAt;
@@ -68,7 +68,7 @@ export class AppointmentCompletedEvent extends BaseDomainEvent {
     appointmentId: AppointmentId,
     completedAt: Date,
     notes?: string,
-    version: number = 1
+    version: number = 1,
   ) {
     super(appointmentId.toString(), version);
     this.completedAt = completedAt;
@@ -84,7 +84,7 @@ export class AppointmentDeclinedEvent extends BaseDomainEvent {
     appointmentId: AppointmentId,
     declinedAt: Date,
     notes?: string,
-    version: number = 1
+    version: number = 1,
   ) {
     super(appointmentId.toString(), version);
     this.declinedAt = declinedAt;

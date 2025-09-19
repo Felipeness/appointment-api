@@ -6,7 +6,7 @@ import { ResilientPrismaService } from './infrastructure/database/resilient-pris
 // Enterprise SQS implementation
 import { EnterpriseSqsModule } from './infrastructure/messaging/enterprise-sqs.module';
 import { AwsSqsProducer } from './infrastructure/messaging/aws-sqs.producer';
-import { EnterpriseAppointmentConsumer } from './infrastructure/messaging/enterprise-appointment.consumer';
+// import { EnterpriseAppointmentConsumer } from './infrastructure/messaging/enterprise-appointment.consumer';
 
 // Resilience components
 import { SagaOrchestrator } from './common/saga/saga-orchestrator';

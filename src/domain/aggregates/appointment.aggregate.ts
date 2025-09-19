@@ -4,23 +4,38 @@ import { AppointmentId } from '../value-objects/appointment-id.vo';
 import { PatientId } from '../value-objects/patient-id.vo';
 import { PsychologistId } from '../value-objects/psychologist-id.vo';
 import { DateService } from '../services/date.service';
-import { 
+import {
   AppointmentScheduledEvent,
   AppointmentConfirmedEvent,
   AppointmentCancelledEvent,
   AppointmentCompletedEvent,
-  AppointmentDeclinedEvent
+  AppointmentDeclinedEvent,
 } from '../events/appointment.events';
-import { AppointmentStatus, AppointmentType, MeetingType } from '../entities/enums';
+import {
+  AppointmentStatus,
+  AppointmentType,
+  MeetingType,
+} from '../entities/enums';
 
 // Zod schemas for validation
 const AppointmentPropsSchema = z.object({
-  id: z.any(), // Temporarily any for compatibility
-  patientId: z.any(), // Temporarily any for compatibility
-  psychologistId: z.any(), // Temporarily any for compatibility
-  scheduledAt: z.date().refine(date => date > new Date(), 'Appointment must be scheduled in the future'),
-  duration: z.number().min(15, 'Duration must be at least 15 minutes').max(240, 'Duration cannot exceed 4 hours').default(60),
-  appointmentType: z.nativeEnum(AppointmentType).default(AppointmentType.CONSULTATION),
+  id: z.instanceof(AppointmentId),
+  patientId: z.instanceof(PatientId),
+  psychologistId: z.instanceof(PsychologistId),
+  scheduledAt: z
+    .date()
+    .refine(
+      (date) => date > new Date(),
+      'Appointment must be scheduled in the future',
+    ),
+  duration: z
+    .number()
+    .min(15, 'Duration must be at least 15 minutes')
+    .max(240, 'Duration cannot exceed 4 hours')
+    .default(60),
+  appointmentType: z
+    .nativeEnum(AppointmentType)
+    .default(AppointmentType.CONSULTATION),
   status: z.nativeEnum(AppointmentStatus).default(AppointmentStatus.PENDING),
   meetingType: z.nativeEnum(MeetingType).default(MeetingType.IN_PERSON),
   meetingUrl: z.string().url().optional(),
@@ -43,11 +58,13 @@ export type AppointmentProps = z.infer<typeof AppointmentPropsSchema>;
 
 export class Appointment extends AggregateRoot<AppointmentProps> {
   private constructor(props: AppointmentProps, version?: number) {
-    super(props, props.id.toString(), version);
+    super(props, (props.id as { toString(): string }).toString(), version);
     this.validate();
   }
 
-  public static create(props: Omit<AppointmentProps, 'id' | 'createdAt' | 'updatedAt'>): Appointment {
+  public static create(
+    props: Omit<AppointmentProps, 'id' | 'createdAt' | 'updatedAt'>,
+  ): Appointment {
     const appointmentProps: AppointmentProps = {
       ...props,
       id: AppointmentId.create(),
@@ -57,9 +74,9 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
 
     // Validate with Zod
     const validatedProps = AppointmentPropsSchema.parse(appointmentProps);
-    
+
     const appointment = new Appointment(validatedProps);
-    
+
     // Add domain event
     appointment.addDomainEvent(
       new AppointmentScheduledEvent(
@@ -68,14 +85,17 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
         validatedProps.psychologistId,
         validatedProps.scheduledAt,
         validatedProps.duration,
-        appointment.version
-      )
+        appointment.version,
+      ),
     );
 
     return appointment;
   }
 
-  public static reconstitute(props: AppointmentProps, version: number): Appointment {
+  public static reconstitute(
+    props: AppointmentProps,
+    version: number,
+  ): Appointment {
     return new Appointment(props, version);
   }
 
@@ -98,7 +118,11 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
       throw new Error('Scheduled date and time is required');
     }
 
-    if (props.patientId.equals(props.psychologistId)) {
+    if (
+      (props.patientId as { equals(other: unknown): boolean }).equals(
+        props.psychologistId,
+      )
+    ) {
       throw new Error('Patient and psychologist cannot be the same person');
     }
 
@@ -176,7 +200,7 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
     this.props.status = AppointmentStatus.CONFIRMED;
     this.props.confirmedAt = DateService.now();
     this.props.updatedAt = DateService.now();
-    
+
     if (notes) {
       this.props.notes = notes;
     }
@@ -186,8 +210,8 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
         this.props.id,
         this.props.confirmedAt,
         notes,
-        this.version
-      )
+        this.version,
+      ),
     );
   }
 
@@ -198,7 +222,7 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
 
     this.props.status = AppointmentStatus.DECLINED;
     this.props.updatedAt = DateService.now();
-    
+
     if (notes) {
       this.props.notes = notes;
     }
@@ -208,8 +232,8 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
         this.props.id,
         DateService.now(),
         notes,
-        this.version
-      )
+        this.version,
+      ),
     );
   }
 
@@ -230,8 +254,8 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
         this.props.cancelledAt,
         cancelledBy,
         reason,
-        this.version
-      )
+        this.version,
+      ),
     );
   }
 
@@ -243,7 +267,7 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
     this.props.status = AppointmentStatus.COMPLETED;
     this.props.completedAt = DateService.now();
     this.props.updatedAt = DateService.now();
-    
+
     if (notes) {
       this.props.notes = notes;
     }
@@ -253,8 +277,8 @@ export class Appointment extends AggregateRoot<AppointmentProps> {
         this.props.id,
         this.props.completedAt,
         notes,
-        this.version
-      )
+        this.version,
+      ),
     );
   }
 

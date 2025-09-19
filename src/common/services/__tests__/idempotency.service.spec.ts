@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-floating-promises */
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { RedisIdempotencyService } from '../idempotency.service';
-import { IdempotencyRecord } from '../interfaces/idempotency.interface';
+import type { IdempotencyRecord } from '../../interfaces/idempotency.interface';
 
 describe('RedisIdempotencyService', () => {
   let service: RedisIdempotencyService;
@@ -16,7 +16,7 @@ describe('RedisIdempotencyService', () => {
 
   afterEach(() => {
     // Clear in-memory cache after each test
-    (service as { cache: Map<string, unknown> }).cache.clear();
+    (service as unknown as { cache: Map<string, unknown> }).cache.clear();
   });
 
   it('should be defined', () => {
@@ -24,7 +24,7 @@ describe('RedisIdempotencyService', () => {
   });
 
   describe('store and get', () => {
-    it('should store and retrieve idempotency record', () => {
+    it('should store and retrieve idempotency record', async () => {
       const record: IdempotencyRecord = {
         key: 'test-key-123',
         userId: 'user-123',
@@ -39,9 +39,9 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000), // 1 hour
       };
 
-      void service.store(record);
+      await service.store(record);
 
-      const retrieved = service.get(
+      const retrieved = await service.get(
         'test-key-123',
         'user-123',
         'POST:/appointments',
@@ -137,8 +137,8 @@ describe('RedisIdempotencyService', () => {
       expiresAt: new Date(Date.now() + 3600000),
     };
 
-    it('should return true for identical parameters', () => {
-      service.store(baseRecord);
+    it('should return true for identical parameters', async () => {
+      await service.store(baseRecord);
 
       const sameParameters = {
         patientId: 'p1',
@@ -150,8 +150,8 @@ describe('RedisIdempotencyService', () => {
       expect(isValid).toBe(true);
     });
 
-    it('should return false for different parameters', () => {
-      service.store(baseRecord);
+    it('should return false for different parameters', async () => {
+      await service.store(baseRecord);
 
       const differentParameters = {
         patientId: 'p2', // Different patient
@@ -173,8 +173,8 @@ describe('RedisIdempotencyService', () => {
       expect(isValid).toBe(true);
     });
 
-    it('should handle parameter order differences', () => {
-      service.store(baseRecord);
+    it('should handle parameter order differences', async () => {
+      await service.store(baseRecord);
 
       // Same parameters, different order
       const reorderedParameters = {
@@ -192,7 +192,7 @@ describe('RedisIdempotencyService', () => {
   });
 
   describe('cleanup', () => {
-    it('should remove expired records', () => {
+    it('should remove expired records', async () => {
       // Add expired record
       const expiredRecord: IdempotencyRecord = {
         key: 'expired-cleanup',
@@ -215,11 +215,13 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      service.store(expiredRecord);
-      service.store(validRecord);
+      await service.store(expiredRecord);
+      await service.store(validRecord);
 
       // Verify both exist initially
-      expect((service as { cache: Map<string, unknown> }).cache.size).toBe(2);
+      expect(
+        (service as unknown as { cache: Map<string, unknown> }).cache.size,
+      ).toBe(2);
 
       // Run cleanup
       void service.cleanup();
@@ -234,7 +236,7 @@ describe('RedisIdempotencyService', () => {
   });
 
   describe('cache key building', () => {
-    it('should build different keys for different contexts', () => {
+    it('should build different keys for different contexts', async () => {
       const record1: IdempotencyRecord = {
         key: 'same-key',
         userId: 'user1',
@@ -257,12 +259,12 @@ describe('RedisIdempotencyService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      service.store(record1);
-      service.store(record2);
+      await service.store(record1);
+      await service.store(record2);
 
       // Both records should be stored separately
-      const result1 = service.get('same-key', 'user1', 'POST:/test');
-      const result2 = service.get('same-key', 'user2', 'POST:/test');
+      const result1 = await service.get('same-key', 'user1', 'POST:/test');
+      const result2 = await service.get('same-key', 'user2', 'POST:/test');
 
       expect(result1).toBeDefined();
       expect(result2).toBeDefined();

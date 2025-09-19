@@ -2,7 +2,7 @@ export interface SagaStep {
   id: string;
   name: string;
   action: () => Promise<unknown>;
-  compensation: () => Promise<unknown>;
+  compensation: () => Promise<unknown> | void;
   retryable?: boolean;
   maxRetries?: number;
 }

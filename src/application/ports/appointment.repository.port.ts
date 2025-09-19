@@ -1,8 +1,8 @@
-import { Appointment } from '../../domain/aggregates/appointment.aggregate';
-import { AppointmentId } from '../../domain/value-objects/appointment-id.vo';
-import { PatientId } from '../../domain/value-objects/patient-id.vo';
-import { PsychologistId } from '../../domain/value-objects/psychologist-id.vo';
-import { AppointmentStatus } from '../../domain/entities/enums';
+import type { Appointment } from '../../domain/aggregates/appointment.aggregate';
+import type { AppointmentId } from '../../domain/value-objects/appointment-id.vo';
+import type { PatientId } from '../../domain/value-objects/patient-id.vo';
+import type { PsychologistId } from '../../domain/value-objects/psychologist-id.vo';
+import type { AppointmentStatus } from '../../domain/entities/enums';
 
 export interface AppointmentRepositoryPort {
   save(appointment: Appointment): Promise<void>;
@@ -14,7 +14,7 @@ export interface AppointmentRepositoryPort {
     psychologistId: PsychologistId,
     scheduledAt: Date,
     duration: number,
-    excludeAppointmentId?: AppointmentId
+    excludeAppointmentId?: AppointmentId,
   ): Promise<Appointment[]>;
   findUpcomingAppointments(limit?: number): Promise<Appointment[]>;
   delete(id: AppointmentId): Promise<void>;

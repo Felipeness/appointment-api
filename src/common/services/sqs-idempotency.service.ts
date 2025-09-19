@@ -10,7 +10,7 @@ export interface SQSIdempotencyRecord {
   processedAt: Date;
   expiresAt: Date;
   processingResult: 'success' | 'failure' | 'retry';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -72,10 +72,10 @@ export class SQSIdempotencyService {
 
     try {
       const record: SQSIdempotencyRecord = {
-        messageId: message.MessageId || 'unknown',
+        messageId: message.MessageId ?? 'unknown',
         messageGroupId: message.Attributes?.MessageGroupId,
         deduplicationId: message.Attributes?.MessageDeduplicationId,
-        bodyHash: this.hashMessageBody(message.Body || ''),
+        bodyHash: this.hashMessageBody(message.Body ?? ''),
         processedAt: new Date(),
         expiresAt: new Date(Date.now() + this.TTL_SECONDS * 1000),
         processingResult: result,
@@ -125,8 +125,8 @@ export class SQSIdempotencyService {
    * Generate deduplication ID for FIFO queues
    */
   generateDeduplicationId(
-    messageBody: any,
-    context?: Record<string, any>,
+    messageBody: unknown,
+    context?: Record<string, unknown>,
   ): string {
     const content =
       typeof messageBody === 'string'
@@ -144,7 +144,7 @@ export class SQSIdempotencyService {
   /**
    * Generate message group ID for FIFO queues based on content
    */
-  generateMessageGroupId(messageBody: any): string {
+  generateMessageGroupId(messageBody: unknown): string {
     // Extract logical grouping from message
     if (
       typeof messageBody === 'object' &&
@@ -172,7 +172,7 @@ export class SQSIdempotencyService {
     isUnique: boolean;
     existingRecord?: SQSIdempotencyRecord;
   } {
-    const bodyHash = this.hashMessageBody(message.Body || '');
+    const bodyHash = this.hashMessageBody(message.Body ?? '');
 
     // Check for messages with same content hash
     for (const record of this.processedMessages.values()) {
@@ -228,7 +228,7 @@ export class SQSIdempotencyService {
     }
 
     // Fallback to content-based key
-    const bodyHash = this.hashMessageBody(message.Body || '');
+    const bodyHash = this.hashMessageBody(message.Body ?? '');
     return `hash:${bodyHash}`;
   }
 

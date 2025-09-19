@@ -1,12 +1,22 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import { Test, TestingModule } from '@nestjs/testing';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { SQSIdempotencyService } from '../sqs-idempotency.service';
 import type { Message } from '@aws-sdk/client-sqs';
 
+interface TestableService extends SQSIdempotencyService {
+  processedMessages: Map<string, unknown>;
+  buildMessageKey: (message: Message) => string;
+  cleanup: () => void;
+}
+
 describe('SQSIdempotencyService', () => {
   let service: SQSIdempotencyService;
+  let testableService: TestableService;
 
-  const createMockMessage = (messageId: string, body: any): Message => ({
+  const createMockMessage = (
+    messageId: string,
+    body: Record<string, unknown>,
+  ): Message => ({
     MessageId: messageId,
     Body: typeof body === 'string' ? body : JSON.stringify(body),
     ReceiptHandle: `receipt-${messageId}`,
@@ -19,11 +29,12 @@ describe('SQSIdempotencyService', () => {
     }).compile();
 
     service = module.get<SQSIdempotencyService>(SQSIdempotencyService);
+    testableService = service as TestableService;
   });
 
   afterEach(() => {
     // Clear in-memory processed messages after each test
-    (service as any).processedMessages.clear();
+    testableService.processedMessages.clear();
   });
 
   it('should be defined', () => {
@@ -73,7 +84,7 @@ describe('SQSIdempotencyService', () => {
       service.markAsProcessed(message, 'success');
 
       // Manually expire the record
-      const record = (service as any).processedMessages.get('msg:msg-expired');
+      const record = testableService.processedMessages.get('msg:msg-expired');
       record.expiresAt = new Date(Date.now() - 1000); // 1 second ago
 
       // Should now return false as expired
@@ -114,9 +125,8 @@ describe('SQSIdempotencyService', () => {
       service.markAsProcessed(message, 'success');
 
       // Expire the record
-      const storedRecord = (service as any).processedMessages.get(
-        'msg:expired-record',
-      );
+      const storedRecord =
+        testableService.processedMessages.get('msg:expired-record');
       storedRecord.expiresAt = new Date(Date.now() - 1000);
 
       const record = service.getProcessingRecord(message);
@@ -240,7 +250,7 @@ describe('SQSIdempotencyService', () => {
 
       // Process first message and expire it
       service.markAsProcessed(message1, 'success');
-      const record = (service as any).processedMessages.get('msg:msg-expired');
+      const record = testableService.processedMessages.get('msg:msg-expired');
       record.expiresAt = new Date(Date.now() - 1000);
 
       // Check uniqueness
@@ -293,7 +303,7 @@ describe('SQSIdempotencyService', () => {
     it('should use MessageId when available', () => {
       const message = createMockMessage('test-id-123', { data: 'test' });
 
-      const key = (service as any).buildMessageKey(message);
+      const key = testableService.buildMessageKey(message);
 
       expect(key).toBe('msg:test-id-123');
     });
@@ -304,7 +314,7 @@ describe('SQSIdempotencyService', () => {
         ReceiptHandle: 'receipt-123',
       };
 
-      const key = (service as any).buildMessageKey(message);
+      const key = testableService.buildMessageKey(message);
 
       expect(key.startsWith('hash:')).toBe(true);
       expect(key).toHaveLength(69); // 'hash:' + 64 char SHA-256
@@ -318,11 +328,11 @@ describe('SQSIdempotencyService', () => {
       service.markAsProcessed(message, 'success');
 
       // Expire the record
-      const record = (service as any).processedMessages.get('msg:cleanup-test');
+      const record = testableService.processedMessages.get('msg:cleanup-test');
       record.expiresAt = new Date(Date.now() - 1000);
 
       // Manually trigger cleanup
-      (service as any).cleanup();
+      testableService.cleanup();
 
       const stats = service.getStats();
       expect(stats.totalProcessed).toBe(0); // Should be cleaned up
